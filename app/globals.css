@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-bg text-white font-inter antialiased;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-xl border border-border rounded-2xl p-6 shadow-2xl;
+  }
+  .gradient-text {
+    @apply bg-gradient-to-r from-accent to-accent2 bg-clip-text text-transparent;
+  }
+}
+
+/* Recharts responsive fixes */
+.recharts-responsive-container {
+  min-height: 0 !important;
+}
