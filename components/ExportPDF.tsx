@@ -1,6 +1,6 @@
 'use client';
-import { PDFDownloadLink, Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
-import { Button } from '@/components/ui/button'; // shadcn button
+import { PDFDownloadLink, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { Button } from '@/components/ui/button';
 import { FileDown } from 'lucide-react';
 
 const styles = StyleSheet.create({
@@ -31,12 +31,16 @@ const PDFDoc = ({ report }: { report: any }) => (
 export const ExportPDFButton = ({ report }: { report: any }) => {
   if (!report) return null;
   return (
-    <PDFDownloadLink document={<PDFDoc report={report} />} fileName={`marketmuse_${report._id}.pdf`}>
-      {({ loading }) => (
+    <PDFDownloadLink
+      document={<PDFDoc report={report} />}
+      fileName={`marketmuse_${report._id || 'report'}.pdf`}
+    >
+      {/* ✅ Fix: Cast the render function to ReactNode */}
+      {(({ loading }: { loading: boolean }) => (
         <Button variant="outline" size="sm" className="gap-2" disabled={loading}>
           <FileDown size={14} /> {loading ? 'Generating...' : 'Export PDF'}
         </Button>
-      )}
+      )) as unknown as React.ReactNode}
     </PDFDownloadLink>
   );
 };
