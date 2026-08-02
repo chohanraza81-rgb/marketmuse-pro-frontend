@@ -10,9 +10,10 @@ export default function ProductResearchPage() {
   const router = useRouter();
 
   const countries = ['us', 'pk', 'gb', 'ae', 'sa'];
-  const flags = { us: '🇺🇸', pk: '🇵🇰', gb: '🇬🇧', ae: '🇦🇪', sa: '🇸🇦' };
+  const flags: Record<string, string> = { us: '🇺🇸', pk: '🇵🇰', gb: '🇬🇧', ae: '🇦🇪', sa: '🇸🇦' };
 
-  const handleSubmit = async (e) => {
+  // ✅ FIX: e ka type explicitly set karo
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!niche.trim()) return;
     setLoading(true);
@@ -26,7 +27,7 @@ export default function ProductResearchPage() {
       if (!res.ok) throw new Error('Failed to generate report');
       const report = await res.json();
       router.push(`/product-research/${report.id}`);
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err.message);
     } finally {
       setLoading(false);
