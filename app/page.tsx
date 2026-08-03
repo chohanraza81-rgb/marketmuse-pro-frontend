@@ -15,16 +15,21 @@ const features = [
 export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white overflow-hidden">
-      {/* Navbar */}
+      {/* Navbar with Live Badge */}
       <nav className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-xl border-b border-neutral-800/50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
               <Sparkles size={16} className="text-white" />
             </div>
             <span className="font-bold text-lg tracking-tight">MarketMuse<span className="text-indigo-400"> PRO</span></span>
+            {/* ✅ Live Status Badge */}
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[10px] text-emerald-400 font-medium uppercase tracking-wider">Live</span>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Link href="/history" className="text-sm text-neutral-400 hover:text-white transition-colors">History</Link>
             <Link href="/product-research" className="text-sm px-4 py-2 rounded-full bg-white text-black font-medium hover:bg-neutral-200 transition-colors">
               Product Research
