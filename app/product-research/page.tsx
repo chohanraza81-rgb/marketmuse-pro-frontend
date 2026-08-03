@@ -1,70 +1,166 @@
 'use client';
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { Sparkles, Globe, ChevronRight, ArrowLeft, Package, TrendingUp, Loader2 } from 'lucide-react';
+import Link from 'next/link';
+
+const countries = [
+  { code: 'us', name: 'United States', flag: '🇺🇸' },
+  { code: 'pk', name: 'Pakistan', flag: '🇵🇰' },
+  { code: 'gb', name: 'United Kingdom', flag: '🇬🇧' },
+  { code: 'ae', name: 'UAE', flag: '🇦🇪' },
+  { code: 'sa', name: 'Saudi Arabia', flag: '🇸🇦' },
+];
 
 export default function ProductResearchPage() {
   const [niche, setNiche] = useState('');
   const [country, setCountry] = useState('us');
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const router = useRouter();
 
-  const countries = ['us', 'pk', 'gb', 'ae', 'sa'];
-  const flags: Record<string, string> = { us: '🇺🇸', pk: '🇵🇰', gb: '🇬🇧', ae: '🇦🇪', sa: '🇸🇦' };
-
-  // ✅ FIX: e ka type explicitly set karo
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!niche.trim()) return;
     setLoading(true);
+    setProgress(0);
+
+    const interval = setInterval(() => setProgress(p => Math.min(p + Math.random() * 15, 90)), 800);
+
     try {
       const API_URL = 'https://marketmuse-pro-backend-production.up.railway.app/api';
       const res = await fetch(`${API_URL}/product-research`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ niche, country }),
+        body: JSON.stringify({ niche: niche.trim(), country }),
       });
       if (!res.ok) throw new Error('Failed to generate report');
       const report = await res.json();
-      router.push(`/product-research/${report.id}`);
+      clearInterval(interval);
+      setProgress(100);
+      setTimeout(() => router.push(`/product-research/${report.id}`), 400);
     } catch (err: any) {
-      toast.error(err.message);
+      clearInterval(interval);
+      toast.error(err.message || 'Something went wrong');
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 1000);
     }
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-4 bg-[#020202]">
-      <div className="text-center max-w-2xl">
-        <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-[#6366F1] to-[#8B5CF6] bg-clip-text text-transparent">
-          Find 6-Figure Products in 30 Seconds
-        </h1>
-        <p className="mt-4 text-gray-400 text-lg">AI-powered product research with real-time market data.</p>
-      </div>
-      <form onSubmit={handleSubmit} className="mt-10 w-full max-w-xl space-y-6 bg-[#0A0A0A] backdrop-blur-xl border border-[#1F1F1F] rounded-2xl p-6">
-        <div>
-          <label className="block text-sm font-medium mb-2 text-white">Product Niche</label>
-          <input type="text" value={niche} onChange={(e) => setNiche(e.target.value)}
-            placeholder="e.g. ergonomic office chair"
-            className="w-full bg-[#020202] border border-[#1F1F1F] rounded-lg px-4 py-3 text-white placeholder-gray-500 outline-none" required />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2 text-white">Target Country</label>
-          <div className="grid grid-cols-5 gap-3">
-            {countries.map((c) => (
-              <button key={c} type="button" onClick={() => setCountry(c)}
-                className={`p-2 border rounded-lg text-lg ${country === c ? 'border-[#6366F1] bg-[#6366F1]/20' : 'border-[#1F1F1F]'}`}>
-                {flags[c]} {c.toUpperCase()}
-              </button>
-            ))}
+    <main className="min-h-screen bg-black text-white">
+      {/* Navbar – exactly like SEO page */}
+      <nav className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-xl border-b border-neutral-800/50">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+              <Sparkles size={16} className="text-white" />
+            </div>
+            <span className="font-bold text-lg tracking-tight">MarketMuse<span className="text-indigo-400"> PRO</span></span>
+          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/history" className="text-sm text-neutral-400 hover:text-white transition-colors">History</Link>
+            <Link href="/product-research" className="text-sm px-4 py-2 rounded-full bg-indigo-600 text-white font-medium">
+              Product Research
+            </Link>
+            <Link href="/seo-report" className="text-sm px-4 py-2 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white transition-colors border border-neutral-700">
+              SEO Report
+            </Link>
           </div>
         </div>
-        <button type="submit" disabled={loading}
-          className="w-full bg-[#6366F1] hover:bg-[#8B5CF6] transition text-white font-semibold py-3 rounded-lg disabled:opacity-50">
-          {loading ? 'Generating...' : 'Generate Report – $99'}
-        </button>
-      </form>
+      </nav>
+
+      {/* Content */}
+      <div className="pt-24 pb-20 px-6">
+        <div className="max-w-3xl mx-auto">
+          <Link href="/" className="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-300 mb-8 transition-colors">
+            <ArrowLeft size={14} /> Back
+          </Link>
+
+          <AnimatePresence mode="wait">
+            {!loading ? (
+              <motion.div key="form" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                    <Package size={22} className="text-emerald-400" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold">Product Research</h1>
+                    <p className="text-sm text-neutral-500">12 competitors · Pricing engine · Launch playbook · Profit forecast</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <div className="glass rounded-2xl p-6 space-y-4">
+                    <label className="block text-sm font-medium text-neutral-300">Product Niche</label>
+                    <input
+                      type="text"
+                      value={niche}
+                      onChange={e => setNiche(e.target.value)}
+                      placeholder="e.g. wireless earbuds, yoga mats, coffee makers..."
+                      className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3.5 text-white placeholder-neutral-600 outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all text-lg"
+                      autoFocus
+                      required
+                    />
+                  </div>
+
+                  <div className="glass rounded-2xl p-6 space-y-4">
+                    <label className="block text-sm font-medium text-neutral-300">Target Country</label>
+                    <div className="grid grid-cols-5 gap-3">
+                      {countries.map((c) => (
+                        <button
+                          key={c.code}
+                          type="button"
+                          onClick={() => setCountry(c.code)}
+                          className={`flex flex-col items-center gap-1 p-3 rounded-xl border transition-all text-xs ${
+                            country === c.code
+                              ? 'border-emerald-500 bg-emerald-500/10 text-white'
+                              : 'border-neutral-800 hover:border-neutral-700 text-neutral-400'
+                          }`}
+                        >
+                          <span className="text-xl">{c.flag}</span>
+                          <span className="font-medium">{c.code.toUpperCase()}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition-all text-lg disabled:opacity-50"
+                  >
+                    Generate Product Report
+                    <ChevronRight size={18} />
+                  </button>
+                </form>
+              </motion.div>
+            ) : (
+              <motion.div key="loading" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass rounded-3xl p-12 text-center space-y-8">
+                <div className="relative w-24 h-24 mx-auto">
+                  <div className="absolute inset-0 rounded-full border-4 border-neutral-800" />
+                  <div className="absolute inset-0 rounded-full border-4 border-t-emerald-500 animate-spin" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <TrendingUp size={28} className="text-emerald-400" />
+                  </div>
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold mb-2">Analyzing Market Data</h2>
+                  <p className="text-neutral-500 text-sm">Scanning products, competitors & trends...</p>
+                </div>
+                <div className="w-full bg-neutral-800 rounded-full h-1.5 overflow-hidden">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
     </main>
   );
 }
