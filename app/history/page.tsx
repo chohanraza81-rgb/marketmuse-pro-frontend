@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Sparkles, ArrowLeft, Search, FileText, TrendingUp, Clock, Globe, Trash2, ExternalLink } from 'lucide-react';
+import { Sparkles, ArrowLeft, Search, FileText, TrendingUp, Clock, ExternalLink, Activity } from 'lucide-react';
 
 interface Report {
   _id: string;
@@ -35,6 +35,12 @@ export default function HistoryPage() {
     return true;
   });
 
+  const getReportLink = (report: Report) => {
+    // ✅ Fixed: Product reports go to /product-research/[id]
+    if (report.type === 'product') return `/product-research/${report._id}`;
+    return `/seo-report/${report._id}`;
+  };
+
   return (
     <main className="min-h-screen bg-black text-white">
       <nav className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-xl border-b border-neutral-800/50">
@@ -45,7 +51,11 @@ export default function HistoryPage() {
             </div>
             <span className="font-bold text-lg">MarketMuse<span className="text-indigo-400"> PRO</span></span>
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[10px] text-emerald-400 font-medium uppercase tracking-wider">Live</span>
+            </div>
             <Link href="/product-research" className="text-sm text-neutral-400 hover:text-white transition-colors">Product</Link>
             <Link href="/seo-report" className="text-sm text-neutral-400 hover:text-white transition-colors">SEO</Link>
             <Link href="/history" className="text-sm px-4 py-2 rounded-full bg-indigo-600 text-white font-medium">History</Link>
@@ -63,7 +73,7 @@ export default function HistoryPage() {
             <h1 className="text-3xl font-bold mb-1">Report History</h1>
             <p className="text-neutral-500 text-sm">{reports.length} reports generated</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {['all', 'product', 'seo'].map(f => (
               <button
                 key={f}
@@ -136,8 +146,9 @@ export default function HistoryPage() {
                     </p>
                   </div>
                 </div>
+                {/* ✅ Fixed: Correct link based on report type */}
                 <Link
-                  href={`/${report.type}-research/${report._id}`}
+                  href={getReportLink(report)}
                   className="opacity-0 group-hover:opacity-100 transition-opacity px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-300 hover:text-white flex items-center gap-1"
                 >
                   View <ExternalLink size={12} />
