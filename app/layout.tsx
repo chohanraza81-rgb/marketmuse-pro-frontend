@@ -1,20 +1,21 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from 'sonner';
+import PasswordGate from '@/components/PasswordGate';
 
 export const metadata: Metadata = {
   title: 'MarketMuse PRO | AI Market Intelligence',
-  description: 'Enterprise-grade product research & SEO intelligence for modern agencies.',
+  description: 'Enterprise-grade product research & SEO intelligence.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
       <body className="min-h-screen bg-black">
-        <Toaster 
-          position="top-center" 
-          theme="dark" 
-          richColors 
+        <Toaster
+          position="top-center"
+          theme="dark"
+          richColors
           expand
           toastOptions={{
             style: {
@@ -26,7 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             },
           }}
         />
-        {children}
+        <PasswordGate>{children}</PasswordGate>
       </body>
     </html>
   );
