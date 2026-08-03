@@ -2,22 +2,71 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 @layer base {
+  * {
+    box-sizing: border-box;
+  }
+  
   body {
-    @apply bg-bg text-white font-inter antialiased;
+    @apply bg-[#000000] text-white font-['Inter'] antialiased;
+    overflow-x: hidden;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-black;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-neutral-800 rounded-full;
   }
 }
 
 @layer components {
-  .glass-card {
-    @apply bg-card/80 backdrop-blur-xl border border-border rounded-2xl p-6 shadow-2xl;
+  .glass {
+    @apply bg-neutral-900/60 backdrop-blur-2xl border border-neutral-800/50;
   }
-  .gradient-text {
-    @apply bg-gradient-to-r from-accent to-accent2 bg-clip-text text-transparent;
+  
+  .glass-hover {
+    @apply hover:bg-neutral-800/60 hover:border-neutral-700/50 transition-all duration-300;
+  }
+  
+  .glow {
+    box-shadow: 0 0 40px rgba(99, 102, 241, 0.08);
+  }
+  
+  .glow-hover:hover {
+    box-shadow: 0 0 60px rgba(99, 102, 241, 0.15);
+  }
+  
+  .text-gradient {
+    @apply bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent;
+  }
+  
+  .border-gradient {
+    border: 1px solid transparent;
+    background: linear-gradient(#0a0a0a, #0a0a0a) padding-box,
+                linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899) border-box;
   }
 }
 
-/* Recharts responsive fixes */
-.recharts-responsive-container {
-  min-height: 0 !important;
+@layer utilities {
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  .animate-pulse-glow {
+    animation: pulseGlow 4s ease-in-out infinite;
+  }
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.1); }
+    50% { box-shadow: 0 0 40px rgba(99, 102, 241, 0.25); }
+  }
 }
