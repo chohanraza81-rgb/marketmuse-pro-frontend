@@ -6,11 +6,11 @@ export async function POST(req: NextRequest) {
 
   if (password === correct) {
     const response = NextResponse.json({ success: true });
-    // 30 days cookie
+    // Set cookie that JavaScript can read (httpOnly: false)
     response.cookies.set('site_auth', 'true', {
-      httpOnly: true,
+      httpOnly: false, // ✅ Changed from true → false so client‑side check works
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24 * 30,
+      maxAge: 60 * 60 * 24 * 30, // 30 days
       path: '/',
       sameSite: 'lax',
     });
