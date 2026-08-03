@@ -1,81 +1,166 @@
 'use client';
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { createSEOReport } from '@/lib/api';
-import { countryFlags } from '@/lib/utils';
-import { LoadingSkeleton } from '@/components/LoadingSkeleton';
+import { Sparkles, Globe, Loader2, ChevronRight, ArrowLeft, Zap, Search, TrendingUp } from 'lucide-react';
+import Link from 'next/link';
 
-const countries = ['us', 'pk', 'gb', 'ae', 'sa'];
+const countries = [
+  { code: 'us', name: 'United States', flag: '🇺🇸' },
+  { code: 'pk', name: 'Pakistan', flag: '🇵🇰' },
+  { code: 'gb', name: 'United Kingdom', flag: '🇬🇧' },
+  { code: 'ae', name: 'UAE', flag: '🇦🇪' },
+  { code: 'sa', name: 'Saudi Arabia', flag: '🇸🇦' },
+];
 
 export default function SEOReportPage() {
   const [niche, setNiche] = useState('');
   const [country, setCountry] = useState('us');
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!niche.trim()) return;
     setLoading(true);
+    setProgress(0);
+
+    const interval = setInterval(() => setProgress(p => Math.min(p + Math.random() * 15, 90)), 800);
+
     try {
-      const report = await createSEOReport(niche, country);
-      router.push(`/seo-report/${report.id}`);
+      const API_URL = 'https://marketmuse-pro-backend-production.up.railway.app/api';
+      const res = await fetch(`${API_URL}/seo-report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ niche: niche.trim(), country }),
+      });
+      if (!res.ok) throw new Error('Failed to generate report');
+      const report = await res.json();
+      clearInterval(interval);
+      setProgress(100);
+      setTimeout(() => router.push(`/seo-report/${report.id}`), 400);
     } catch (err: any) {
-      toast.error(err.message);
+      clearInterval(interval);
+      toast.error(err.message || 'Something went wrong');
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 1000);
     }
   };
 
-  if (loading) return <LoadingSkeleton />;
-
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-4">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-2xl">
-        <h1 className="text-4xl md:text-6xl font-bold font-satoshi bg-gradient-to-r from-accent to-accent2 bg-clip-text text-transparent">
-          Dominate Google Page 1 in 30 Days
-        </h1>
-        <p className="mt-4 text-gray-400 text-lg">AI-powered SEO report with 50 golden keywords, content calendar & backlink strategy.</p>
-      </motion.div>
-      <motion.form
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        onSubmit={handleSubmit}
-        className="glass-card mt-10 w-full max-w-xl space-y-6"
-      >
-        <div>
-          <label className="block text-sm font-medium mb-2">Niche / Topic</label>
-          <input
-            type="text"
-            value={niche}
-            onChange={e => setNiche(e.target.value)}
-            placeholder="e.g. keto diet for beginners"
-            className="w-full bg-bg border border-border rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">Target Country</label>
-          <div className="grid grid-cols-5 gap-3">
-            {countries.map(c => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setCountry(c)}
-                className={`p-2 border rounded-lg text-lg ${country === c ? 'border-accent bg-accent/20' : 'border-border hover:border-gray-600'}`}
-              >
-                {countryFlags[c]} {c.toUpperCase()}
-              </button>
-            ))}
+    <main className="min-h-screen bg-black text-white">
+      {/* Navbar */}
+      <nav className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-xl border-b border-neutral-800/50">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+              <Sparkles size={16} className="text-white" />
+            </div>
+            <span className="font-bold text-lg tracking-tight">MarketMuse<span className="text-indigo-400"> PRO</span></span>
+          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/history" className="text-sm text-neutral-400 hover:text-white transition-colors">History</Link>
+            <Link href="/product-research" className="text-sm px-4 py-2 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white transition-colors border border-neutral-700">
+              Product Research
+            </Link>
+            <Link href="/seo-report" className="text-sm px-4 py-2 rounded-full bg-indigo-600 text-white font-medium">
+              SEO Report
+            </Link>
           </div>
         </div>
-        <button type="submit" className="w-full bg-accent hover:bg-accent2 transition text-white font-semibold py-3 rounded-lg">
-          Generate SEO Report – $99
-        </button>
-      </motion.form>
+      </nav>
+
+      {/* Content */}
+      <div className="pt-24 pb-20 px-6">
+        <div className="max-w-3xl mx-auto">
+          <Link href="/" className="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-300 mb-8 transition-colors">
+            <ArrowLeft size={14} /> Back
+          </Link>
+
+          <AnimatePresence mode="wait">
+            {!loading ? (
+              <motion.div key="form" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
+                    <Search size={22} className="text-indigo-400" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold">SEO Intelligence Report</h1>
+                    <p className="text-sm text-neutral-500">50 keywords · SERP analysis · Content calendar · Backlink strategy</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <div className="glass rounded-2xl p-6 space-y-4">
+                    <label className="block text-sm font-medium text-neutral-300">Niche / Topic</label>
+                    <input
+                      type="text"
+                      value={niche}
+                      onChange={e => setNiche(e.target.value)}
+                      placeholder="e.g. keto diet for beginners"
+                      className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3.5 text-white placeholder-neutral-600 outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all text-lg"
+                      autoFocus
+                      required
+                    />
+                  </div>
+
+                  <div className="glass rounded-2xl p-6 space-y-4">
+                    <label className="block text-sm font-medium text-neutral-300">Target Country</label>
+                    <div className="grid grid-cols-5 gap-3">
+                      {countries.map((c) => (
+                        <button
+                          key={c.code}
+                          type="button"
+                          onClick={() => setCountry(c.code)}
+                          className={`flex flex-col items-center gap-1 p-3 rounded-xl border transition-all text-xs ${
+                            country === c.code
+                              ? 'border-indigo-500 bg-indigo-500/10 text-white'
+                              : 'border-neutral-800 hover:border-neutral-700 text-neutral-400'
+                          }`}
+                        >
+                          <span className="text-xl">{c.flag}</span>
+                          <span className="font-medium">{c.code.toUpperCase()}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition-all text-lg disabled:opacity-50"
+                  >
+                    Generate Report
+                    <ChevronRight size={18} />
+                  </button>
+                </form>
+              </motion.div>
+            ) : (
+              <motion.div key="loading" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass rounded-3xl p-12 text-center space-y-8">
+                <div className="relative w-24 h-24 mx-auto">
+                  <div className="absolute inset-0 rounded-full border-4 border-neutral-800" />
+                  <div className="absolute inset-0 rounded-full border-4 border-t-indigo-500 animate-spin" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Sparkles size={28} className="text-indigo-400" />
+                  </div>
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold mb-2">Generating SEO Intelligence</h2>
+                  <p className="text-neutral-500 text-sm">Analyzing SERP data, keywords & trends...</p>
+                </div>
+                <div className="w-full bg-neutral-800 rounded-full h-1.5 overflow-hidden">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
     </main>
   );
 }
