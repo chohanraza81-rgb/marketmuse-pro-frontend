@@ -5,7 +5,7 @@ import PasswordGate from '@/components/PasswordGate';
 
 export const metadata: Metadata = {
   title: 'MarketMuse PRO | AI Market Intelligence',
-  description: 'Enterprise-grade product research & SEO intelligence.',
+  description: 'Enterprise product research & SEO intelligence.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
