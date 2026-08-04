@@ -1,104 +1,215 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { getReport } from '@/lib/api';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Share2 } from 'lucide-react';
 import Link from 'next/link';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CopyAllButton } from '@/components/CopyAllButton';
-import { ExportPDFButton } from '@/components/ExportPDF';
-import { ExportCSVButton } from '@/components/ExportCSV';
-import { KeywordTable } from '@/components/KeywordTable';
-import { TrendChart } from '@/components/TrendChart';
-import { SerpTable } from '@/components/SerpTable';
-import { ContentCalendarGrid } from '@/components/ContentCalendarGrid';
-import { MarkdownViewer } from '@/components/MarkdownViewer';
-import { LoadingSkeleton } from '@/components/LoadingSkeleton';
-import { countryFlags } from '@/lib/utils';
+import { motion } from 'framer-motion';
+import { Sparkles, ArrowLeft, Share2, Loader2, Copy, Check, FileDown, Download, Search } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import { toast } from 'sonner';
+import LiveStatus from '@/components/LiveStatus';
 
 export default function SEOReportPage() {
   const { id } = useParams();
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [pdfGenerating, setPdfGenerating] = useState(false);
 
   useEffect(() => {
-    getReport(id as string).then(data => { setReport(data); setLoading(false); }).catch(() => setLoading(false));
+    if (!id) return;
+    fetch(`https://marketmuse-pro-backend-production.up.railway.app/api/reports/${id}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Report not found');
+        return res.json();
+      })
+      .then(data => {
+        if (data.type !== 'seo') throw new Error('Invalid report type');
+        setReport(data);
+      })
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <LoadingSkeleton />;
-  if (!report) return <div className="text-center mt-20">Report not found</div>;
+  const handleCopyAll = async () => {
+    if (!report?.markdown) return;
+    await navigator.clipboard.writeText(report.markdown);
+    setCopied(true);
+    toast.success('Report copied to clipboard', { icon: '✅' });
+    setTimeout(() => setCopied(false), 2000);
+  };
 
-  const niche = report.niche;
-  const country = report.country;
-  const analysis = report.data;
-  const trends = report.charts?.trends || [];
+  const handleExportPDF = () => {
+    if (!report) return;
+    setPdfGenerating(true);
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Please allow pop‑ups for PDF export');
+      setPdfGenerating(false);
+      return;
+    }
+    printWindow.document.write(`
+      <html>
+        <head><title>MarketMuse PRO – SEO Report</title>
+        <style>body{font-family:Arial,sans-serif;padding:40px;color:#000;line-height:1.6;}h1{color:#1a1a1a;}pre{white-space:pre-wrap;font-size:12px;}</style>
+        </head>
+        <body>
+          <h1>SEO Report: ${report.niche}</h1>
+          <pre>${report.markdown}</pre>
+          <footer style="margin-top:40px;font-size:12px;color:#666;">MarketMuse PRO – Confidential</footer>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      setPdfGenerating(false);
+    }, 500);
+  };
+
+  const handleExportCSV = () => {
+    if (!report?.data?.keywords) {
+      toast.error('No keyword data to export');
+      return;
+    }
+    const rows = report.data.keywords.map((k: any) => ({
+      Keyword: k.keyword,
+      Volume: k.volume,
+      KD: k.kd,
+      CPC: k.cpc,
+      Intent: k.intent,
+    }));
+    const csv = [
+      Object.keys(rows[0]).join(','),
+      ...rows.map((r: any) => Object.values(r).join(',')),
+    ].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `seo-keywords-${report.niche?.replace(/\s+/g, '-')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('CSV downloaded', { icon: '✅' });
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `SEO Report: ${report?.niche}`,
+          text: 'MarketMuse PRO intelligence',
+          url: window.location.href,
+        });
+      } catch {}
+    } else {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success('Link copied', { icon: '✅' });
+    }
+  };
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 size={32} className="animate-spin text-indigo-400 mx-auto" />
+          <p className="text-neutral-400">Loading report…</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (error || !report) {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <p className="text-red-400 text-lg">❌ {error || 'Report not found'}</p>
+          <Link href="/seo-report" className="text-indigo-400 hover:underline">← Back to SEO Report</Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <main className="min-h-screen p-4 md:p-8">
-      <div className="flex items-center justify-between mb-6 glass-card p-4 flex-wrap gap-4">
-        <div className="flex items-center gap-4">
-          <Link href="/seo-report" className="text-gray-400 hover:text-white"><ArrowLeft /></Link>
-          <h1 className="text-xl font-bold">{niche}</h1>
-          <span className="text-2xl">{countryFlags[country]}</span>
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${analysis.trend_score === 'Seasonal' ? 'bg-orange-500/20 text-orange-400' : 'bg-green-500/20 text-green-400'}`}>
-            {analysis.trend_score}
-          </span>
+    <main className="min-h-screen bg-black text-white">
+      {/* Navbar */}
+      <nav className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-neutral-800/50">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                <Sparkles size={16} className="text-white" />
+              </div>
+              <span className="font-bold text-lg">MarketMuse<span className="text-indigo-400"> PRO</span></span>
+            </Link>
+            <LiveStatus />
+          </div>
+          <div className="flex items-center gap-3">
+            <Link href="/history" className="text-sm text-neutral-400 hover:text-white transition-colors">History</Link>
+            <Link href="/product-research" className="text-sm px-4 py-2 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700">Product</Link>
+            <Link href="/seo-report" className="text-sm px-4 py-2 rounded-full bg-indigo-600 text-white font-medium">SEO</Link>
+          </div>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <CopyAllButton items={analysis.keywords?.map((k:any) => k.keyword) || []} label="Copy All Keywords" />
-          <ExportPDFButton report={report} />
-          <ExportCSVButton data={analysis.keywords || []} filename={`seo_keywords_${niche}.csv`} />
-          <button onClick={() => {
-            navigator.share?.({ title: `SEO Report: ${niche}`, url: window.location.href })
-              .catch(() => navigator.clipboard.writeText(window.location.href));
-          }} className="p-1.5 border border-border rounded-lg"><Share2 size={16} /></button>
+      </nav>
+
+      {/* Action Bar */}
+      <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <Link href="/history" className="text-neutral-500 hover:text-neutral-300 transition-colors">
+              <ArrowLeft size={18} />
+            </Link>
+            <Search size={16} className="text-indigo-400" />
+            <span className="text-sm text-neutral-300 font-medium capitalize">{report.niche}</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400">SEO</span>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={handleCopyAll}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm text-neutral-300 transition-colors"
+            >
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+              {copied ? 'Copied' : 'Copy Report'}
+            </button>
+            <button
+              onClick={handleExportPDF}
+              disabled={pdfGenerating}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm text-neutral-300 transition-colors disabled:opacity-50"
+            >
+              <FileDown size={14} />
+              {pdfGenerating ? 'Opening…' : 'PDF'}
+            </button>
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm text-neutral-300 transition-colors"
+            >
+              <Download size={14} />
+              CSV
+            </button>
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm text-neutral-300 transition-colors"
+            >
+              <Share2 size={14} />
+              Share
+            </button>
+          </div>
         </div>
       </div>
 
-      <Tabs defaultValue="keywords" className="w-full">
-        <TabsList className="glass-card mb-6 flex overflow-x-auto">
-          <TabsTrigger value="keywords">Keyword Goldmine</TabsTrigger>
-          <TabsTrigger value="trends">Trend Analysis</TabsTrigger>
-          <TabsTrigger value="serp">SERP Intelligence</TabsTrigger>
-          <TabsTrigger value="calendar">Content Calendar</TabsTrigger>
-          <TabsTrigger value="strategy">Strategy</TabsTrigger>
-          <TabsTrigger value="markdown">Markdown / Raw</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="keywords">
-          <KeywordTable keywords={analysis.keywords || []} />
-        </TabsContent>
-
-        <TabsContent value="trends">
-          <div className="glass-card p-6 mb-6">
-            <h3 className="font-semibold mb-4">12-Month Interest Over Time</h3>
-            <TrendChart data={trends} />
-          </div>
-          <div className="glass-card p-6">
-            <h3 className="font-semibold mb-4">Related Query Trends</h3>
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              Bar chart placeholder – can use Recharts BarChart with related queries data
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="serp">
-          <SerpTable serp={analysis.serp_analysis || []} />
-        </TabsContent>
-
-        <TabsContent value="calendar">
-          <ContentCalendarGrid calendar={analysis.content_calendar || []} />
-        </TabsContent>
-
-        <TabsContent value="strategy">
-          <MarkdownViewer content={`# Backlink Strategy\n${analysis.backlink_strategy}\n\n## On-page Checklist\n- Optimize title tags\n- Meta descriptions\n- Header tags\n- Image alt attributes\n- Internal linking\n- Mobile responsiveness\n- Page speed`} />
-        </TabsContent>
-
-        <TabsContent value="markdown">
-          <MarkdownViewer content={report.markdown} />
-        </TabsContent>
-      </Tabs>
+      {/* Report Content */}
+      <div className="max-w-4xl mx-auto px-6 pb-20">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass rounded-3xl p-8 md:p-12"
+        >
+          <article className="prose prose-invert max-w-none prose-headings:text-white prose-p:text-neutral-300 prose-strong:text-white prose-a:text-indigo-400 prose-table:text-sm prose-th:text-neutral-300 prose-td:text-neutral-400">
+            <ReactMarkdown>{report.markdown}</ReactMarkdown>
+          </article>
+        </motion.div>
+      </div>
     </main>
   );
 }
