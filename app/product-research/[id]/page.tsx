@@ -3,9 +3,10 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Sparkles, ArrowLeft, Share2, Loader2, Copy, Check, FileDown, Download } from 'lucide-react';
+import { Sparkles, ArrowLeft, Share2, Loader2, Copy, Check, FileDown, Download, TrendingUp } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
+import LiveStatus from '@/components/LiveStatus';
 
 export default function ProductReportPage() {
   const { id } = useParams();
@@ -34,34 +35,28 @@ export default function ProductReportPage() {
     if (!report?.markdown) return;
     await navigator.clipboard.writeText(report.markdown);
     setCopied(true);
-    toast.success('Report copied to clipboard');
+    toast.success('Report copied to clipboard', { icon: '✅' });
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleExportPDF = async () => {
+  const handleExportPDF = () => {
     if (!report) return;
     setPdfGenerating(true);
-    // Simple PDF generation using browser print
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-      toast.error('Please allow pop-ups for PDF export');
+      toast.error('Please allow pop‑ups for PDF export');
       setPdfGenerating(false);
       return;
     }
     printWindow.document.write(`
       <html>
-        <head>
-          <title>MarketMuse PRO Report</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 40px; color: #000; line-height: 1.6; }
-            h1 { color: #1a1a1a; }
-            pre { white-space: pre-wrap; font-size: 12px; }
-          </style>
+        <head><title>MarketMuse PRO – Product Research</title>
+        <style>body{font-family:Arial,sans-serif;padding:40px;color:#000;line-height:1.6;}h1{color:#1a1a1a;}pre{white-space:pre-wrap;font-size:12px;}</style>
         </head>
         <body>
           <h1>Product Research: ${report.niche}</h1>
           <pre>${report.markdown}</pre>
-          <footer style="margin-top: 40px; font-size: 12px; color: #666;">MarketMuse PRO – Private Report</footer>
+          <footer style="margin-top:40px;font-size:12px;color:#666;">MarketMuse PRO – Confidential</footer>
         </body>
       </html>
     `);
@@ -94,10 +89,10 @@ export default function ProductReportPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `product-research-${report.niche?.replace(/\s+/g, '-')}.csv`;
+    a.download = `product-pricing-${report.niche?.replace(/\s+/g, '-')}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success('CSV downloaded');
+    toast.success('CSV downloaded', { icon: '✅' });
   };
 
   const handleShare = async () => {
@@ -105,13 +100,13 @@ export default function ProductReportPage() {
       try {
         await navigator.share({
           title: `Product Research: ${report?.niche}`,
-          text: 'Check out this product research report from MarketMuse PRO.',
+          text: 'MarketMuse PRO intelligence',
           url: window.location.href,
         });
       } catch {}
     } else {
       await navigator.clipboard.writeText(window.location.href);
-      toast.success('Link copied to clipboard');
+      toast.success('Link copied', { icon: '✅' });
     }
   };
 
@@ -119,8 +114,8 @@ export default function ProductReportPage() {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center space-y-4">
-          <Loader2 size={32} className="animate-spin text-indigo-400 mx-auto" />
-          <p className="text-neutral-400">Loading report...</p>
+          <Loader2 size={32} className="animate-spin text-emerald-400 mx-auto" />
+          <p className="text-neutral-400">Loading report…</p>
         </div>
       </main>
     );
@@ -130,8 +125,8 @@ export default function ProductReportPage() {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center space-y-4">
-          <p className="text-red-400 text-lg">⚠️ {error || 'Report not found'}</p>
-          <Link href="/product-research" className="text-indigo-400 hover:underline">← Back to Product Research</Link>
+          <p className="text-red-400 text-lg">❌ {error || 'Report not found'}</p>
+          <Link href="/product-research" className="text-emerald-400 hover:underline">← Back to Product Research</Link>
         </div>
       </main>
     );
@@ -149,10 +144,7 @@ export default function ProductReportPage() {
               </div>
               <span className="font-bold text-lg">MarketMuse<span className="text-indigo-400"> PRO</span></span>
             </Link>
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[10px] text-emerald-400 font-medium uppercase tracking-wider">Live</span>
-            </div>
+            <LiveStatus />
           </div>
           <div className="flex items-center gap-3">
             <Link href="/history" className="text-sm text-neutral-400 hover:text-white transition-colors">History</Link>
@@ -169,38 +161,22 @@ export default function ProductReportPage() {
             <Link href="/history" className="text-neutral-500 hover:text-neutral-300 transition-colors">
               <ArrowLeft size={18} />
             </Link>
+            <TrendingUp size={16} className="text-emerald-400" />
             <span className="text-sm text-neutral-300 font-medium capitalize">{report.niche}</span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">Product</span>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={handleCopyAll}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm text-neutral-300 transition-colors"
-            >
-              {copied ? <Check size={14} /> : <Copy size={14} />}
-              {copied ? 'Copied' : 'Copy Report'}
+            <button onClick={handleCopyAll} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm text-neutral-300 transition-colors">
+              {copied ? <Check size={14} /> : <Copy size={14} />}{copied ? 'Copied' : 'Copy Report'}
             </button>
-            <button
-              onClick={handleExportPDF}
-              disabled={pdfGenerating}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm text-neutral-300 transition-colors disabled:opacity-50"
-            >
-              <FileDown size={14} />
-              {pdfGenerating ? 'Opening...' : 'PDF'}
+            <button onClick={handleExportPDF} disabled={pdfGenerating} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm text-neutral-300 transition-colors disabled:opacity-50">
+              <FileDown size={14} />{pdfGenerating ? 'Opening…' : 'PDF'}
             </button>
-            <button
-              onClick={handleExportCSV}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm text-neutral-300 transition-colors"
-            >
-              <Download size={14} />
-              CSV
+            <button onClick={handleExportCSV} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm text-neutral-300 transition-colors">
+              <Download size={14} />CSV
             </button>
-            <button
-              onClick={handleShare}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm text-neutral-300 transition-colors"
-            >
-              <Share2 size={14} />
-              Share
+            <button onClick={handleShare} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm text-neutral-300 transition-colors">
+              <Share2 size={14} />Share
             </button>
           </div>
         </div>
@@ -213,7 +189,7 @@ export default function ProductReportPage() {
           animate={{ opacity: 1, y: 0 }}
           className="glass rounded-3xl p-8 md:p-12"
         >
-          <article className="prose prose-invert max-w-none prose-headings:text-white prose-p:text-neutral-300 prose-strong:text-white prose-a:text-indigo-400 prose-table:text-sm">
+          <article className="prose prose-invert max-w-none prose-headings:text-white prose-p:text-neutral-300 prose-strong:text-white prose-a:text-indigo-400 prose-table:text-sm prose-th:text-neutral-300 prose-td:text-neutral-400">
             <ReactMarkdown>{report.markdown}</ReactMarkdown>
           </article>
         </motion.div>
