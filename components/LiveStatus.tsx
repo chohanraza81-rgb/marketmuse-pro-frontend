@@ -7,14 +7,15 @@ export default function LiveStatus() {
   useEffect(() => {
     const check = async () => {
       try {
-        const res = await fetch('https://marketmuse-pro-backend-production.up.railway.app/api/health');
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+        const res = await fetch(`${apiUrl}/health`);
         setOnline(res.ok);
       } catch {
         setOnline(false);
       }
     };
     check();
-    const interval = setInterval(check, 30000); // every 30s
+    const interval = setInterval(check, 30000);
     return () => clearInterval(interval);
   }, []);
 
