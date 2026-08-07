@@ -1,8 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Sparkles, ArrowLeft, Search, FileText, TrendingUp, Clock, ExternalLink, Trash2 } from 'lucide-react';
+import { Sparkles, ArrowLeft, Search, FileText, TrendingUp, Clock, ExternalLink, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import LiveStatus from '@/components/LiveStatus';
 
@@ -25,28 +25,38 @@ export default function HistoryPage() {
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
+  const [apiUrl, setApiUrl] = useState('');
 
-  // ✅ Use environment variable
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production-a93c.up.railway.app/api';
+  // ✅ Get API URL on client side
+  useEffect(() => {
+    const url = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production-a93c.up.railway.app/api';
+    setApiUrl(url);
+  }, []);
 
-  useEffect(() => { fetchReports(); }, []);
-
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
+    if (!apiUrl) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/reports?limit=100`);
+      const res = await fetch(`${apiUrl}/reports?limit=100`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setReports(data.reports || []);
-    } catch (err) {
-      toast.error('Failed to load history');
+    } catch (err: any) {
+      console.error('History fetch error:', err);
+      toast.error('Failed to load history. Check backend connection.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiUrl]);
+
+  useEffect(() => {
+    if (apiUrl) fetchReports();
+  }, [apiUrl, fetchReports]);
 
   const handleDelete = async (id: string) => {
     try {
-      await fetch(`${API_URL}/reports/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${apiUrl}/reports/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Delete failed');
       setReports(prev => prev.filter(r => r._id !== id));
       toast.success('Report deleted');
     } catch {
@@ -57,11 +67,12 @@ export default function HistoryPage() {
   const handleBulkDelete = async () => {
     if (selected.length === 0) return;
     try {
-      await fetch(`${API_URL}/reports/bulk-delete`, {
+      const res = await fetch(`${apiUrl}/reports/bulk-delete`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: selected }),
       });
+      if (!res.ok) throw new Error('Bulk delete failed');
       setReports(prev => prev.filter(r => !selected.includes(r._id)));
       setSelected([]);
       toast.success(`${selected.length} reports deleted`);
@@ -99,16 +110,22 @@ export default function HistoryPage() {
       </nav>
 
       <div className="pt-24 pb-20 px-6 max-w-6xl mx-auto">
-        <Link href="/" className="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-300 mb-6"><ArrowLeft size={14} /> Back</Link>
-
         <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl font-bold mb-1">Report History</h1>
-            <p className="text-neutral-500 text-sm">{reports.length} reports total</p>
+            <div className="flex items-center gap-3 mb-1">
+              <Link href="/" className="text-neutral-500 hover:text-neutral-300 transition-colors"><ArrowLeft size={16} /></Link>
+              <h1 className="text-3xl font-bold">Report History</h1>
+            </div>
+            <p className="text-neutral-500 text-sm ml-9">{reports.length} reports total</p>
           </div>
-          {selected.length > 0 && (
-            <button onClick={handleBulkDelete} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-medium"><Trash2 size={14} /> Delete {selected.length} selected</button>
-          )}
+          <div className="flex items-center gap-2">
+            <button onClick={fetchReports} className="p-2 rounded-lg hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors" title="Refresh">
+              <RefreshCw size={16} />
+            </button>
+            {selected.length > 0 && (
+              <button onClick={handleBulkDelete} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-medium"><Trash2 size={14} /> Delete {selected.length}</button>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-4 mb-6 flex-wrap">
@@ -124,7 +141,11 @@ export default function HistoryPage() {
         {loading ? (
           <div className="space-y-3">{Array.from({length:5}).map((_,i)=><div key={i} className="h-16 bg-neutral-900 rounded-xl animate-pulse" />)}</div>
         ) : filtered.length === 0 ? (
-          <div className="glass rounded-3xl p-12 text-center"><FileText size={40} className="text-neutral-700 mx-auto mb-4" /><p className="text-neutral-500">No reports found.</p></div>
+          <div className="glass rounded-3xl p-12 text-center">
+            <FileText size={40} className="text-neutral-700 mx-auto mb-4" />
+            <p className="text-neutral-500">No reports found.</p>
+            <button onClick={fetchReports} className="text-indigo-400 hover:underline text-sm mt-2">Refresh</button>
+          </div>
         ) : (
           <div className="space-y-2">
             {filtered.map((r, i) => (
