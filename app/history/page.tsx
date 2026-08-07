@@ -10,7 +10,7 @@ interface Report {
 }
 
 const flags: Record<string, string> = {
-  us:'🇺�', gb:'🇬�', ca:'🇨🇦', au:'🇦🇺', de:'🇩🇪', sg:'🇸🇬',
+  us:'🇺🇸', gb:'🇬🇧', ca:'🇨🇦', au:'🇦🇺', de:'🇩🇪', sg:'🇸🇬',
   sa:'🇸🇦', ae:'🇦🇪', pk:'🇵🇰', in:'🇮🇳', tr:'🇹🇷', my:'🇲🇾',
 };
 
@@ -25,11 +25,8 @@ export default function HistoryPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${API_URL}/reports?limit=100`, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' },
-        mode: 'cors',
-      });
+      // ✅ Simple URL — no query params
+      const res = await fetch(`${API_URL}/reports`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setReports(data.reports || []);
