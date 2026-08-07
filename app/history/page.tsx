@@ -19,7 +19,6 @@ const flags: Record<string, string> = {
   sa:'🇸🇦', ae:'🇦🇪', pk:'🇵🇰', in:'🇮🇳', tr:'🇹🇷', my:'🇲🇾',
 };
 
-// ✅ Hardcoded backend URL as fallback
 const BACKEND_URL = 'https://marketmuse-pro-backend-production-a93c.up.railway.app/api';
 
 export default function HistoryPage() {
@@ -32,14 +31,12 @@ export default function HistoryPage() {
   const fetchReports = async () => {
     setLoading(true);
     try {
-      // ✅ Direct hardcoded URL — no env variable dependency
       const res = await fetch(`${BACKEND_URL}/reports?limit=100`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      console.log('✅ History fetched:', data.reports?.length, 'reports');
       setReports(data.reports || []);
     } catch (err: any) {
-      console.error('❌ History error:', err);
+      console.error('History fetch error:', err);
       toast.error('Failed to load history');
     } finally {
       setLoading(false);
@@ -87,6 +84,7 @@ export default function HistoryPage() {
 
   return (
     <main className="min-h-screen bg-black text-white">
+      {/* Navbar */}
       <nav className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-xl border-b border-neutral-800/50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -104,7 +102,9 @@ export default function HistoryPage() {
         </div>
       </nav>
 
+      {/* Content */}
       <div className="pt-24 pb-20 px-6 max-w-6xl mx-auto">
+        {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
           <div>
             <div className="flex items-center gap-3 mb-1">
@@ -118,14 +118,19 @@ export default function HistoryPage() {
               <RefreshCw size={16} />
             </button>
             {selected.length > 0 && (
-              <button onClick={handleBulkDelete} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-medium"><Trash2 size={14} /> Delete {selected.length}</button>
+              <button onClick={handleBulkDelete} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-medium">
+                <Trash2 size={14} /> Delete {selected.length}
+              </button>
             )}
           </div>
         </div>
 
+        {/* Filters */}
         <div className="flex items-center gap-4 mb-6 flex-wrap">
           {['all', 'product', 'seo'].map(f => (
-            <button key={f} onClick={() => setFilter(f)} className={`px-4 py-2 rounded-lg text-sm font-medium capitalize ${filter === f ? 'bg-neutral-800 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}>{f}</button>
+            <button key={f} onClick={() => setFilter(f)} className={`px-4 py-2 rounded-lg text-sm font-medium capitalize ${filter === f ? 'bg-neutral-800 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}>
+              {f}
+            </button>
           ))}
           <div className="glass rounded-xl px-3 py-2 flex items-center gap-2 flex-1 max-w-xs">
             <Search size={16} className="text-neutral-500" />
@@ -133,15 +138,20 @@ export default function HistoryPage() {
           </div>
         </div>
 
+        {/* Loading */}
         {loading ? (
-          <div className="space-y-3">{Array.from({length:5}).map((_,i)=><div key={i} className="h-16 bg-neutral-900 rounded-xl animate-pulse" />)}</div>
+          <div className="space-y-3">
+            {Array.from({length:5}).map((_,i) => <div key={i} className="h-16 bg-neutral-900 rounded-xl animate-pulse" />)}
+          </div>
         ) : filtered.length === 0 ? (
+          /* Empty State */
           <div className="glass rounded-3xl p-12 text-center">
             <FileText size={40} className="text-neutral-700 mx-auto mb-4" />
             <p className="text-neutral-500">No reports found.</p>
             <button onClick={fetchReports} className="text-indigo-400 hover:underline text-sm mt-2">Refresh</button>
           </div>
         ) : (
+          /* Reports List */
           <div className="space-y-2">
             {filtered.map((r, i) => (
               <motion.div key={r._id} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay: i*0.03 }}
