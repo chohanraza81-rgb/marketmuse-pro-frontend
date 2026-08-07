@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 
 interface Report {
   _id: string;
@@ -11,37 +10,54 @@ interface Report {
 }
 
 const flags: Record<string, string> = {
-  us:'🇺🇸', gb:'🇬🇧', ca:'🇨🇦', au:'🇦🇺', de:'🇩🇪', sg:'🇸🇬',
+  us:'🇺�', gb:'🇬�', ca:'🇨🇦', au:'🇦🇺', de:'🇩🇪', sg:'🇸🇬',
   sa:'🇸🇦', ae:'🇦🇪', pk:'🇵🇰', in:'🇮🇳', tr:'🇹🇷', my:'🇲🇾',
 };
 
+const API_URL = 'https://marketmuse-pro-backend-production-a93c.up.railway.app/api';
+
 export default function HistoryPage() {
   const [reports, setReports] = useState<Report[]>([]);
-  const [message, setMessage] = useState('Loading...');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  const loadReports = () => {
-    setMessage('Loading...');
-    fetch('https://marketmuse-pro-backend-production-a93c.up.railway.app/api/reports?limit=100&_=' + Date.now())
-      .then(r => r.json())
-      .then(data => {
-        setReports(data.reports || []);
-        setMessage('');
-      })
-      .catch(err => {
-        setMessage('Error: ' + err.message);
+  const loadReports = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`${API_URL}/reports?limit=100`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        mode: 'cors',
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setReports(data.reports || []);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     loadReports();
   }, []);
 
-  if (message) {
+  if (loading) {
+    return (
+      <div style={{ background: '#000', color: '#fff', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (error) {
     return (
       <div style={{ background: '#000', color: '#fff', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', padding: '20px' }}>
-        <p style={{ fontSize: '18px' }}>{message}</p>
-        <button onClick={loadReports} style={{ background: '#6366f1', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontSize: '14px', cursor: 'pointer' }}>Retry</button>
-        <a href="/" style={{ color: '#6366f1' }}>Home</a>
+        <p style={{ color: '#ef4444' }}>Error: {error}</p>
+        <button onClick={loadReports} style={{ background: '#6366f1', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer' }}>Retry</button>
       </div>
     );
   }
@@ -59,42 +75,20 @@ export default function HistoryPage() {
       <p style={{ color: '#888', marginBottom: '20px' }}>{reports.length} reports total</p>
 
       {reports.length === 0 ? (
-        <p style={{ color: '#888', textAlign: 'center', padding: '40px' }}>
-          No reports found.<br/>
-          <button onClick={loadReports} style={{ color: '#6366f1', background: 'none', border: 'none', marginTop: '8px', cursor: 'pointer', textDecoration: 'underline' }}>Click to refresh</button>
-        </p>
+        <p style={{ color: '#888', textAlign: 'center', padding: '40px' }}>No reports found. <button onClick={loadReports} style={{ color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer' }}>Refresh</button></p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {reports.map((r) => (
-            <div key={r._id} style={{
-              background: '#0a0a0a', border: '1px solid #1f1f1f', borderRadius: '12px',
-              padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-            }}>
+            <div key={r._id} style={{ background: '#0a0a0a', border: '1px solid #1f1f1f', borderRadius: '12px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px' }}>
-                  <span style={{
-                    padding: '2px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: 600,
-                    background: r.type === 'product' ? '#05966920' : '#4f46e520',
-                    color: r.type === 'product' ? '#34d399' : '#818cf8'
-                  }}>
-                    {r.type === 'product' ? 'Product' : 'SEO'}
-                  </span>
+                  <span style={{ padding: '2px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: 600, background: r.type === 'product' ? '#05966920' : '#4f46e520', color: r.type === 'product' ? '#34d399' : '#818cf8' }}>{r.type === 'product' ? 'Product' : 'SEO'}</span>
                   <span>{flags[r.country]}</span>
                 </div>
                 <p style={{ fontWeight: 500, textTransform: 'capitalize' }}>{r.niche}</p>
-                <p style={{ fontSize: '12px', color: '#666' }}>
-                  {new Date(r.createdAt).toLocaleDateString()}
-                </p>
+                <p style={{ fontSize: '12px', color: '#666' }}>{new Date(r.createdAt).toLocaleDateString()}</p>
               </div>
-              <a
-                href={r.type === 'product' ? `/product-research/${r._id}` : `/seo-report/${r._id}`}
-                style={{
-                  padding: '6px 14px', borderRadius: '8px', background: '#1f1f1f',
-                  color: '#ccc', textDecoration: 'none', fontSize: '13px'
-                }}
-              >
-                View →
-              </a>
+              <a href={r.type === 'product' ? `/product-research/${r._id}` : `/seo-report/${r._id}`} style={{ padding: '6px 14px', borderRadius: '8px', background: '#1f1f1f', color: '#ccc', textDecoration: 'none', fontSize: '13px' }}>View →</a>
             </div>
           ))}
         </div>
