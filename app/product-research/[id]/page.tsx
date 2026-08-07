@@ -16,9 +16,12 @@ export default function ProductReportPage() {
   const [copied, setCopied] = useState(false);
   const [pdfGenerating, setPdfGenerating] = useState(false);
 
+  // ✅ Use environment variable
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production-a93c.up.railway.app/api';
+
   useEffect(() => {
     if (!id) return;
-    fetch(`https://marketmuse-pro-backend-production.up.railway.app/api/reports/${id}`)
+    fetch(`${API_URL}/reports/${id}`)
       .then(res => {
         if (!res.ok) throw new Error('Report not found');
         return res.json();
@@ -134,7 +137,6 @@ export default function ProductReportPage() {
 
   return (
     <main className="min-h-screen bg-black text-white">
-      {/* Navbar */}
       <nav className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-neutral-800/50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -154,13 +156,10 @@ export default function ProductReportPage() {
         </div>
       </nav>
 
-      {/* Action Bar */}
       <div className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <Link href="/history" className="text-neutral-500 hover:text-neutral-300 transition-colors">
-              <ArrowLeft size={18} />
-            </Link>
+            <Link href="/history" className="text-neutral-500 hover:text-neutral-300 transition-colors"><ArrowLeft size={18} /></Link>
             <TrendingUp size={16} className="text-emerald-400" />
             <span className="text-sm text-neutral-300 font-medium capitalize">{report.niche}</span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">Product</span>
@@ -182,13 +181,8 @@ export default function ProductReportPage() {
         </div>
       </div>
 
-      {/* Report Content */}
       <div className="max-w-4xl mx-auto px-6 pb-20">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass rounded-3xl p-8 md:p-12"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-3xl p-8 md:p-12">
           <article className="prose prose-invert max-w-none prose-headings:text-white prose-p:text-neutral-300 prose-strong:text-white prose-a:text-indigo-400 prose-table:text-sm prose-th:text-neutral-300 prose-td:text-neutral-400">
             <ReactMarkdown>{report.markdown}</ReactMarkdown>
           </article>
