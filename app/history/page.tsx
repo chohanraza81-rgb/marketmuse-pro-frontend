@@ -19,8 +19,9 @@ export default function HistoryPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [message, setMessage] = useState('Loading...');
 
-  useEffect(() => {
-    fetch('https://marketmuse-pro-backend-production-a93c.up.railway.app/api/reports?limit=100')
+  const loadReports = () => {
+    setMessage('Loading...');
+    fetch('https://marketmuse-pro-backend-production-a93c.up.railway.app/api/reports?limit=100&_=' + Date.now())
       .then(r => r.json())
       .then(data => {
         setReports(data.reports || []);
@@ -29,13 +30,17 @@ export default function HistoryPage() {
       .catch(err => {
         setMessage('Error: ' + err.message);
       });
+  };
+
+  useEffect(() => {
+    loadReports();
   }, []);
 
   if (message) {
     return (
       <div style={{ background: '#000', color: '#fff', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', padding: '20px' }}>
         <p style={{ fontSize: '18px' }}>{message}</p>
-        <a href="/history" style={{ color: '#6366f1' }}>Retry</a>
+        <button onClick={loadReports} style={{ background: '#6366f1', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontSize: '14px', cursor: 'pointer' }}>Retry</button>
         <a href="/" style={{ color: '#6366f1' }}>Home</a>
       </div>
     );
@@ -45,13 +50,19 @@ export default function HistoryPage() {
     <div style={{ background: '#000', color: '#fff', minHeight: '100vh', padding: '80px 20px', maxWidth: '900px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>Report History</h1>
-        <a href="/" style={{ color: '#6366f1', textDecoration: 'none' }}>← Home</a>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button onClick={loadReports} style={{ background: '#1f1f1f', color: '#ccc', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>Refresh</button>
+          <a href="/" style={{ color: '#6366f1', textDecoration: 'none', lineHeight: '2.2' }}>← Home</a>
+        </div>
       </div>
       
       <p style={{ color: '#888', marginBottom: '20px' }}>{reports.length} reports total</p>
 
       {reports.length === 0 ? (
-        <p style={{ color: '#888', textAlign: 'center', padding: '40px' }}>No reports found.</p>
+        <p style={{ color: '#888', textAlign: 'center', padding: '40px' }}>
+          No reports found.<br/>
+          <button onClick={loadReports} style={{ color: '#6366f1', background: 'none', border: 'none', marginTop: '8px', cursor: 'pointer', textDecoration: 'underline' }}>Click to refresh</button>
+        </p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {reports.map((r) => (
