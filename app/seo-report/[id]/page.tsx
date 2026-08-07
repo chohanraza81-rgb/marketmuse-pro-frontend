@@ -16,9 +16,12 @@ export default function SEOReportPage() {
   const [copied, setCopied] = useState(false);
   const [pdfGenerating, setPdfGenerating] = useState(false);
 
+  // ✅ Use environment variable with fallback
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production-a93c.up.railway.app/api';
+
   useEffect(() => {
     if (!id) return;
-    fetch(`https://marketmuse-pro-backend-production.up.railway.app/api/reports/${id}`)
+    fetch(`${API_URL}/reports/${id}`)
       .then(res => {
         if (!res.ok) throw new Error('Report not found');
         return res.json();
