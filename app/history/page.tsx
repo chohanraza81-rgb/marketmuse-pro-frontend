@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Sparkles, ArrowLeft, Search, FileText, TrendingUp, Clock, ExternalLink, Trash2, RefreshCw } from 'lucide-react';
@@ -19,44 +19,40 @@ const flags: Record<string, string> = {
   sa:'🇸🇦', ae:'🇦🇪', pk:'🇵🇰', in:'🇮🇳', tr:'🇹🇷', my:'🇲🇾',
 };
 
+// ✅ Hardcoded backend URL as fallback
+const BACKEND_URL = 'https://marketmuse-pro-backend-production-a93c.up.railway.app/api';
+
 export default function HistoryPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
-  const [apiUrl, setApiUrl] = useState('');
 
-  // ✅ Get API URL on client side
-  useEffect(() => {
-    const url = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production-a93c.up.railway.app/api';
-    setApiUrl(url);
-  }, []);
-
-  const fetchReports = useCallback(async () => {
-    if (!apiUrl) return;
+  const fetchReports = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${apiUrl}/reports?limit=100`);
+      // ✅ Direct hardcoded URL — no env variable dependency
+      const res = await fetch(`${BACKEND_URL}/reports?limit=100`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+      console.log('✅ History fetched:', data.reports?.length, 'reports');
       setReports(data.reports || []);
     } catch (err: any) {
-      console.error('History fetch error:', err);
-      toast.error('Failed to load history. Check backend connection.');
+      console.error('❌ History error:', err);
+      toast.error('Failed to load history');
     } finally {
       setLoading(false);
     }
-  }, [apiUrl]);
+  };
 
   useEffect(() => {
-    if (apiUrl) fetchReports();
-  }, [apiUrl, fetchReports]);
+    fetchReports();
+  }, []);
 
   const handleDelete = async (id: string) => {
     try {
-      const res = await fetch(`${apiUrl}/reports/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Delete failed');
+      await fetch(`${BACKEND_URL}/reports/${id}`, { method: 'DELETE' });
       setReports(prev => prev.filter(r => r._id !== id));
       toast.success('Report deleted');
     } catch {
@@ -67,12 +63,11 @@ export default function HistoryPage() {
   const handleBulkDelete = async () => {
     if (selected.length === 0) return;
     try {
-      const res = await fetch(`${apiUrl}/reports/bulk-delete`, {
+      await fetch(`${BACKEND_URL}/reports/bulk-delete`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: selected }),
       });
-      if (!res.ok) throw new Error('Bulk delete failed');
       setReports(prev => prev.filter(r => !selected.includes(r._id)));
       setSelected([]);
       toast.success(`${selected.length} reports deleted`);
@@ -113,13 +108,13 @@ export default function HistoryPage() {
         <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <Link href="/" className="text-neutral-500 hover:text-neutral-300 transition-colors"><ArrowLeft size={16} /></Link>
+              <Link href="/" className="text-neutral-500 hover:text-neutral-300"><ArrowLeft size={16} /></Link>
               <h1 className="text-3xl font-bold">Report History</h1>
             </div>
             <p className="text-neutral-500 text-sm ml-9">{reports.length} reports total</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={fetchReports} className="p-2 rounded-lg hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors" title="Refresh">
+            <button onClick={fetchReports} className="p-2 rounded-lg hover:bg-neutral-800 text-neutral-400 hover:text-white" title="Refresh">
               <RefreshCw size={16} />
             </button>
             {selected.length > 0 && (
