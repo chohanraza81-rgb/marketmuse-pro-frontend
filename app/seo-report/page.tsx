@@ -38,7 +38,8 @@ export default function SEOReportPage() {
     const interval = setInterval(() => setProgress(p => Math.min(p + Math.random() * 15, 90)), 800);
 
     try {
-      const API_URL = 'https://marketmuse-pro-backend-production.up.railway.app/api';
+      // ✅ Use environment variable with fallback
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production-a93c.up.railway.app/api';
       const res = await fetch(`${API_URL}/seo-report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
