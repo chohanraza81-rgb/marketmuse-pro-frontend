@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Sparkles, ArrowLeft, Search, FileText, TrendingUp, Clock, ExternalLink, Trash2, Filter, X } from 'lucide-react';
+import { Sparkles, ArrowLeft, Search, FileText, TrendingUp, Clock, ExternalLink, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import LiveStatus from '@/components/LiveStatus';
 
@@ -26,12 +26,15 @@ export default function HistoryPage() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
 
+  // ✅ Use environment variable
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production-a93c.up.railway.app/api';
+
   useEffect(() => { fetchReports(); }, []);
 
   const fetchReports = async () => {
     setLoading(true);
     try {
-      const res = await fetch('https://marketmuse-pro-backend-production.up.railway.app/api/reports?limit=100');
+      const res = await fetch(`${API_URL}/reports?limit=100`);
       const data = await res.json();
       setReports(data.reports || []);
     } catch (err) {
@@ -43,7 +46,7 @@ export default function HistoryPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      await fetch(`https://marketmuse-pro-backend-production.up.railway.app/api/reports/${id}`, { method: 'DELETE' });
+      await fetch(`${API_URL}/reports/${id}`, { method: 'DELETE' });
       setReports(prev => prev.filter(r => r._id !== id));
       toast.success('Report deleted');
     } catch {
@@ -54,7 +57,7 @@ export default function HistoryPage() {
   const handleBulkDelete = async () => {
     if (selected.length === 0) return;
     try {
-      await fetch('https://marketmuse-pro-backend-production.up.railway.app/api/reports/bulk-delete', {
+      await fetch(`${API_URL}/reports/bulk-delete`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: selected }),
@@ -81,7 +84,10 @@ export default function HistoryPage() {
       <nav className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-xl border-b border-neutral-800/50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2"><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center"><Sparkles size={16} className="text-white" /></div><span className="font-bold text-lg">MarketMuse<span className="text-indigo-400"> PRO</span></span></Link>
+            <Link href="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center"><Sparkles size={16} className="text-white" /></div>
+              <span className="font-bold text-lg">MarketMuse<span className="text-indigo-400"> PRO</span></span>
+            </Link>
             <LiveStatus />
           </div>
           <div className="flex items-center gap-3">
