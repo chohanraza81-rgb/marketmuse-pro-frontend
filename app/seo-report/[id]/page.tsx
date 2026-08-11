@@ -14,7 +14,6 @@ import {
   AreaChart, Area
 } from 'recharts';
 
-const COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production-a93c.up.railway.app/api';
 
 export default function SEOReportPage() {
