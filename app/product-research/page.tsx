@@ -36,7 +36,6 @@ export default function ProductResearchPage() {
     setProgress(0);
     const interval = setInterval(() => setProgress(p => Math.min(p + Math.random() * 15, 90)), 800);
     try {
-      // ✅ Use environment variable with fallback
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production-a93c.up.railway.app/api';
       const res = await fetch(`${API_URL}/product-research`, {
         method: 'POST',
@@ -48,7 +47,8 @@ export default function ProductResearchPage() {
       clearInterval(interval);
       setProgress(100);
       toast.success('Product report generated successfully', { icon: '✅' });
-      setTimeout(() => router.push(`/product-research/${report.id}`), 500);
+      // ✅ Redirect to the unified report page
+      setTimeout(() => router.push(`/report/${report.id}`), 500);
     } catch (err: any) {
       clearInterval(interval);
       toast.error(err.message || 'Generation failed', { icon: '❌' });
@@ -64,7 +64,7 @@ export default function ProductResearchPage() {
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center"><Sparkles size={16} className="text-white" /></div>
-              <span className="font-bold text-lg">MarketMuse<span className="text-indigo-400"> PRO</span></span>
+              <span className="font-bold text-lg">Muse<span className="text-indigo-400">PRO</span></span>
             </Link>
             <LiveStatus />
           </div>
