@@ -123,7 +123,7 @@ export default function HistoryPage() {
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <Link
-                  href={`/${r.type}-research/${r._id}`}
+                  href={`/report/${r._id}`}
                   style={{
                     padding: '6px 14px',
                     borderRadius: '8px',
