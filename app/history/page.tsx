@@ -38,7 +38,8 @@ export default function HistoryPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${BACKEND_URL}/reports?limit=1000`);
+      // fetch up to 500 reports – adjust if needed
+      const res = await fetch(`${BACKEND_URL}/reports?limit=500`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setReports(data.reports || []);
