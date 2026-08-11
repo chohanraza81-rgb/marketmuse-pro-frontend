@@ -97,12 +97,17 @@ export default function UnifiedReportPage() {
   const isProduct = report.type === 'product';
   const data = report.data;
   const financials = data?.financial_forecast || data?.financial_projections || {};
+
+  // Product charts
   const demandTrend = data?.chart_data?.demand_forecast_12m?.map((v: number, i: number) => ({ month: `M${i+1}`, value: v })) || [];
   const marketShare = data?.chart_data?.competitor_market_share || [];
   const profitBars = isProduct ? data?.pricing_engine?.map((p: any) => ({ name: p.title?.substring(0, 30), margin: p.profit_margin_percent })) : [];
-  const risks = data?.risk_matrix || data?.risk_radar || [];
+
+  // SEO charts
   const trendLine = data?.chart_data?.trend_12m?.map((v: number, i: number) => ({ month: `M${i+1}`, value: v })) || [];
   const trafficForecast = data?.chart_data?.traffic_forecast_6m?.map((v: number, i: number) => ({ month: `M${i+1}`, traffic: v })) || data?.chart_data?.traffic_growth_6m?.map((v: number, i: number) => ({ month: `M${i+1}`, traffic: v })) || [];
+
+  const risks = data?.risk_matrix || data?.risk_radar || [];
 
   return (
     <main className="min-h-screen bg-[#0A0A0A] text-white font-['Inter']">
@@ -148,10 +153,9 @@ export default function UnifiedReportPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="p-4 rounded-xl bg-[#171717] border border-neutral-800">
             <p className="text-xs text-neutral-400 mb-1">{isProduct ? 'OPPORTUNITY SCORE' : 'TREND'}</p>
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold font-mono">{isProduct ? (data?.market_score || '-') : (data?.trend_assessment || data?.trend_score || '-')}</span>
-              {isProduct && <span className="text-sm text-neutral-500">/100</span>}
-            </div>
+            <p className="text-2xl font-bold font-mono">
+              {isProduct ? (data?.market_score || '-') : (data?.trend_assessment || data?.trend_score || '-')}
+            </p>
             {isProduct && (
               <div className="mt-2 w-full h-1.5 rounded-full bg-neutral-700">
                 <div className="h-full rounded-full bg-emerald-500" style={{ width: `${data?.market_score || 0}%` }} />
@@ -187,8 +191,9 @@ export default function UnifiedReportPage() {
           )}
         </div>
 
-        {/* Charts Grid */}
+        {/* Charts Grid – Product + SEO specific */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Product Demand Trend */}
           {demandTrend.length > 0 && (
             <div className="p-4 rounded-xl bg-[#171717] border border-neutral-800">
               <h3 className="text-sm font-semibold mb-3">DEMAND TREND (12 MONTHS)</h3>
@@ -203,6 +208,24 @@ export default function UnifiedReportPage() {
               </ResponsiveContainer>
             </div>
           )}
+
+          {/* SEO Trend Line */}
+          {trendLine.length > 0 && (
+            <div className="p-4 rounded-xl bg-[#171717] border border-neutral-800">
+              <h3 className="text-sm font-semibold mb-3">SEARCH TREND (12 MONTHS)</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={trendLine}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                  <XAxis dataKey="month" stroke="#A3A3A3" fontSize={12} />
+                  <YAxis stroke="#A3A3A3" fontSize={12} />
+                  <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #262626', borderRadius: '8px' }} />
+                  <Line type="monotone" dataKey="value" stroke="#8B5CF6" strokeWidth={2} dot={{ r: 3, fill: '#8B5CF6' }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Market Share (Product only) */}
           {marketShare.length > 0 && (
             <div className="p-4 rounded-xl bg-[#171717] border border-neutral-800">
               <h3 className="text-sm font-semibold mb-3">MARKET SHARE DISTRIBUTION</h3>
@@ -223,6 +246,8 @@ export default function UnifiedReportPage() {
               </div>
             </div>
           )}
+
+          {/* Traffic Forecast (SEO) */}
           {trafficForecast.length > 0 && (
             <div className="p-4 rounded-xl bg-[#171717] border border-neutral-800">
               <h3 className="text-sm font-semibold mb-3">TRAFFIC FORECAST (6 MONTHS)</h3>
@@ -232,7 +257,7 @@ export default function UnifiedReportPage() {
                   <XAxis dataKey="month" stroke="#A3A3A3" fontSize={12} />
                   <YAxis stroke="#A3A3A3" fontSize={12} />
                   <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #262626', borderRadius: '8px' }} />
-                  <Area type="monotone" dataKey="traffic" stroke="#8B5CF6" fill="#8B5CF630" />
+                  <Area type="monotone" dataKey="traffic" stroke="#06B6D4" fill="#06B6D430" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
