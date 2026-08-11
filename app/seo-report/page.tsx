@@ -38,7 +38,6 @@ export default function SEOReportPage() {
     const interval = setInterval(() => setProgress(p => Math.min(p + Math.random() * 15, 90)), 800);
 
     try {
-      // ✅ Use environment variable with fallback
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production-a93c.up.railway.app/api';
       const res = await fetch(`${API_URL}/seo-report`, {
         method: 'POST',
@@ -50,7 +49,8 @@ export default function SEOReportPage() {
       clearInterval(interval);
       setProgress(100);
       toast.success('SEO report generated successfully', { icon: '✅' });
-      setTimeout(() => router.push(`/seo-report/${report.id}`), 500);
+      // ✅ Redirect to the unified report page
+      setTimeout(() => router.push(`/report/${report.id}`), 500);
     } catch (err: any) {
       clearInterval(interval);
       toast.error(err.message || 'Generation failed', { icon: '❌' });
@@ -68,7 +68,7 @@ export default function SEOReportPage() {
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
                 <Sparkles size={16} className="text-white" />
               </div>
-              <span className="font-bold text-lg">MarketMuse<span className="text-indigo-400"> PRO</span></span>
+              <span className="font-bold text-lg">Muse<span className="text-indigo-400">PRO</span></span>
             </Link>
             <LiveStatus />
           </div>
