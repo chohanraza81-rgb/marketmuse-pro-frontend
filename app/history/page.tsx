@@ -33,12 +33,12 @@ export default function HistoryPage() {
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [page, setPage] = useState(1);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const fetchReports = async () => {
     setLoading(true);
     setError('');
     try {
-      // fetch up to 500 reports – adjust if needed
       const res = await fetch(`${BACKEND_URL}/reports?limit=500`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -91,6 +91,7 @@ export default function HistoryPage() {
       await fetch(`${BACKEND_URL}/reports/${id}`, { method: 'DELETE' });
       setReports((prev) => prev.filter((r) => r._id !== id));
       setSelected((prev) => prev.filter((sid) => sid !== id));
+      setDeleteConfirmId(null);
     } catch {}
   };
 
@@ -311,18 +312,37 @@ export default function HistoryPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Link
-                      href={`/${r.type}-research/${r._id}`}
-                      className="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-300 hover:text-white flex items-center gap-1"
-                    >
-                      <ExternalLink size={12} /> View
-                    </Link>
-                    <button
-                      onClick={() => handleDelete(r._id)}
-                      className="p-1.5 rounded-lg hover:bg-red-500/10 text-neutral-500 hover:text-red-400"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    {deleteConfirmId === r._id ? (
+                      <div className="flex items-center gap-2 bg-neutral-900 rounded-lg p-1">
+                        <button
+                          onClick={() => handleDelete(r._id)}
+                          className="px-2 py-1 text-xs bg-red-600 hover:bg-red-500 text-white rounded"
+                        >
+                          Confirm Delete
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirmId(null)}
+                          className="px-2 py-1 text-xs bg-neutral-700 hover:bg-neutral-600 text-neutral-300 rounded"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <Link
+                          href={`/${r.type}-research/${r._id}`}
+                          className="px-3 py-1.5 rounded-lg bg-neutral-800 text-sm text-neutral-300 hover:text-white flex items-center gap-1"
+                        >
+                          <ExternalLink size={12} /> View
+                        </Link>
+                        <button
+                          onClick={() => setDeleteConfirmId(r._id)}
+                          className="p-1.5 rounded-lg hover:bg-red-500/10 text-neutral-500 hover:text-red-400"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
