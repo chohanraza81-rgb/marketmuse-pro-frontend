@@ -57,8 +57,8 @@ export default function SEOReportPage() {
     if (!report?.data?.keywords) { toast.error('No keyword data'); return; }
     const rows = report.data.keywords.map((k: any) => ({ Keyword: k.keyword, Volume: k.volume, KD: k.kd, CPC: k.cpc }));
     const csv = [Object.keys(rows[0]).join(','), ...rows.map((r: any) => Object.values(r).join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `seo-${report.niche}.csv`; a.click(); URL.revokeObjectURL(url);
+    const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `seo-${report.niche}.csv`; a.click(); URL.revokeObjectURL(url);
     toast.success('CSV downloaded');
   };
   const handleShare = async () => {
