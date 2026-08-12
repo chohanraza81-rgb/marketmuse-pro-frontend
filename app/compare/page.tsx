@@ -62,21 +62,44 @@ export default function ComparePage() {
       });
   }, []);
 
+  // ─── Helper Functions (Fixed for SEO) ───
   const getScore = (r: Report | null): number => {
     if (!r) return 0;
-    if (typeof r.data?.market_score === 'number') return r.data.market_score;
+
+    // Product: direct market_score
+    if (r.type === 'product' && typeof r.data?.market_score === 'number') {
+      return r.data.market_score;
+    }
+
+    // SEO: use trend_score quality + traffic forecast
     if (r.type === 'seo') {
       const forecast = r.data?.chart_data?.traffic_forecast_6m || r.data?.chart_data?.traffic_growth_6m;
-      if (forecast && forecast.length > 0) return forecast[forecast.length - 1]?.traffic ?? 0;
+      if (forecast && forecast.length > 0) {
+        const lastTraffic = forecast[forecast.length - 1]?.traffic || 0;
+        // Normalize: assume 100k visits = 100 score
+        return Math.min(Math.round(lastTraffic / 1000), 100);
+      }
+      if (r.data?.trend_score === 'Evergreen') return 70;
+      if (r.data?.trend_score === 'Seasonal') return 50;
     }
+
     return 0;
   };
 
   const getProfitOrTraffic = (r: Report | null): number => {
     if (!r) return 0;
-    if (r.type === 'product') return r.data?.financial_forecast?.month6_profit_optimistic || 0;
+
+    if (r.type === 'product') {
+      return r.data?.financial_forecast?.month6_profit_optimistic || 0;
+    }
+
+    // SEO: return total traffic from forecast
     const forecast = r.data?.chart_data?.traffic_forecast_6m || r.data?.chart_data?.traffic_growth_6m;
-    return forecast?.[forecast.length - 1]?.traffic || 0;
+    if (forecast && forecast.length > 0) {
+      return forecast[forecast.length - 1]?.traffic || 0;
+    }
+
+    return 0;
   };
 
   const handleCompare = () => {
@@ -96,7 +119,7 @@ export default function ComparePage() {
       toast.error('No comparison to copy');
       return;
     }
-    const md = `# MusePRO — Report Comparison\n\n## Report 1\n- **Niche:** ${report1.niche}\n- **Country:** ${flags[report1.country]} ${report1.country.toUpperCase()}\n- **Type:** ${report1.type}\n- **Market Score:** ${getScore(report1)}/100\n- **Opportunity Level:** ${report1.data?.opportunity_level || report1.data?.trend_assessment || 'N/A'}\n- **Est. Monthly Profit / Traffic:** ${report1.type === 'product' ? `$${getProfitOrTraffic(report1).toLocaleString()}` : `${getProfitOrTraffic(report1).toLocaleString()} visits`}\n\n## Report 2\n- **Niche:** ${report2.niche}\n- **Country:** ${flags[report2.country]} ${report2.country.toUpperCase()}\n- **Type:** ${report2.type}\n- **Market Score:** ${getScore(report2)}/100\n- **Opportunity Level:** ${report2.data?.opportunity_level || report2.data?.trend_assessment || 'N/A'}\n- **Est. Monthly Profit / Traffic:** ${report2.type === 'product' ? `$${getProfitOrTraffic(report2).toLocaleString()}` : `${getProfitOrTraffic(report2).toLocaleString()} visits`}\n\n## Winner\n**${getScore(report1) >= getScore(report2) ? report1.niche : report2.niche}** is the stronger opportunity.`;
+    const md = `# MusePRO — Report Comparison\n\n## Report 1\n- **Niche:** ${report1.niche}\n- **Country:** ${flags[report1.country]} ${report1.country.toUpperCase()}\n- **Type:** ${report1.type}\n- **Market Score:** ${getScore(report1)}/100\n- **Opportunity Level:** ${report1.data?.opportunity_level || report1.data?.trend_assessment || report1.data?.trend_score || 'N/A'}\n- **Est. Monthly Profit / Traffic:** ${report1.type === 'product' ? `$${getProfitOrTraffic(report1).toLocaleString()}` : `${getProfitOrTraffic(report1).toLocaleString()} visits`}\n\n## Report 2\n- **Niche:** ${report2.niche}\n- **Country:** ${flags[report2.country]} ${report2.country.toUpperCase()}\n- **Type:** ${report2.type}\n- **Market Score:** ${getScore(report2)}/100\n- **Opportunity Level:** ${report2.data?.opportunity_level || report2.data?.trend_assessment || report2.data?.trend_score || 'N/A'}\n- **Est. Monthly Profit / Traffic:** ${report2.type === 'product' ? `$${getProfitOrTraffic(report2).toLocaleString()}` : `${getProfitOrTraffic(report2).toLocaleString()} visits`}\n\n## Winner\n**${getScore(report1) >= getScore(report2) ? report1.niche : report2.niche}** is the stronger opportunity.`;
     await navigator.clipboard.writeText(md);
     setCopied(true);
     toast.success('Comparison markdown copied');
@@ -111,7 +134,7 @@ export default function ComparePage() {
     const rows = [
       ['Metric', report1.niche, report2.niche],
       ['Market Score', getScore(report1), getScore(report2)],
-      ['Opportunity Level', report1.data?.opportunity_level || report1.data?.trend_assessment || '', report2.data?.opportunity_level || report2.data?.trend_assessment || ''],
+      ['Opportunity Level', report1.data?.opportunity_level || report1.data?.trend_assessment || report1.data?.trend_score || '', report2.data?.opportunity_level || report2.data?.trend_assessment || report2.data?.trend_score || ''],
       ['Est. Monthly Profit / Traffic', report1.type === 'product' ? `$${getProfitOrTraffic(report1)}` : `${getProfitOrTraffic(report1)} visits`, report2.type === 'product' ? `$${getProfitOrTraffic(report2)}` : `${getProfitOrTraffic(report2)} visits`],
       ['Winner', getScore(report1) >= getScore(report2) ? report1.niche : report2.niche, ''],
     ];
@@ -154,7 +177,7 @@ export default function ComparePage() {
           <table>
             <tr><th>Metric</th><th>${report1.niche}</th><th>${report2.niche}</th></tr>
             <tr><td>Market Score</td><td>${getScore(report1)}/100</td><td>${getScore(report2)}/100</td></tr>
-            <tr><td>Opportunity Level</td><td>${report1.data?.opportunity_level || report1.data?.trend_assessment || 'N/A'}</td><td>${report2.data?.opportunity_level || report2.data?.trend_assessment || 'N/A'}</td></tr>
+            <tr><td>Opportunity Level</td><td>${report1.data?.opportunity_level || report1.data?.trend_assessment || report1.data?.trend_score || 'N/A'}</td><td>${report2.data?.opportunity_level || report2.data?.trend_assessment || report2.data?.trend_score || 'N/A'}</td></tr>
             <tr><td>Est. Monthly Profit / Traffic</td><td>${report1.type === 'product' ? `$${getProfitOrTraffic(report1).toLocaleString()}` : `${getProfitOrTraffic(report1).toLocaleString()} visits`}</td><td>${report2.type === 'product' ? `$${getProfitOrTraffic(report2).toLocaleString()}` : `${getProfitOrTraffic(report2).toLocaleString()} visits`}</td></tr>
           </table>
           <p class="winner">Winner: ${getScore(report1) >= getScore(report2) ? report1.niche : report2.niche}</p>
@@ -333,7 +356,7 @@ export default function ComparePage() {
                       <span className="font-mono font-bold">{getScore(report1)}/100</span>
                     </div>
                   </div>
-                  <p><span className="text-neutral-500">Opportunity:</span> <strong>{report1.data?.opportunity_level || report1.data?.trend_assessment || 'N/A'}</strong></p>
+                  <p><span className="text-neutral-500">Opportunity:</span> <strong>{report1.data?.opportunity_level || report1.data?.trend_assessment || report1.data?.trend_score || 'N/A'}</strong></p>
                   <p>
                     <span className="text-neutral-500">{report1.type === 'product' ? 'Est. Monthly Profit:' : 'Est. 6‑Month Traffic:'}</span>{' '}
                     <strong>{report1.type === 'product' ? `$${getProfitOrTraffic(report1).toLocaleString()}` : `${getProfitOrTraffic(report1).toLocaleString()} visits`}</strong>
@@ -370,7 +393,7 @@ export default function ComparePage() {
                       <span className="font-mono font-bold">{getScore(report2)}/100</span>
                     </div>
                   </div>
-                  <p><span className="text-neutral-500">Opportunity:</span> <strong>{report2.data?.opportunity_level || report2.data?.trend_assessment || 'N/A'}</strong></p>
+                  <p><span className="text-neutral-500">Opportunity:</span> <strong>{report2.data?.opportunity_level || report2.data?.trend_assessment || report2.data?.trend_score || 'N/A'}</strong></p>
                   <p>
                     <span className="text-neutral-500">{report2.type === 'product' ? 'Est. Monthly Profit:' : 'Est. 6‑Month Traffic:'}</span>{' '}
                     <strong>{report2.type === 'product' ? `$${getProfitOrTraffic(report2).toLocaleString()}` : `${getProfitOrTraffic(report2).toLocaleString()} visits`}</strong>
