@@ -40,6 +40,61 @@ const flags: Record<string, string> = {
   sa: '🇸🇦', ae: '🇦🇪', pk: '🇵🇰', in: '🇮🇳', tr: '🇹🇷', my: '🇲🇾',
 };
 
+// ─── Robust Getter Functions ───
+const getScore = (r: Report | null): number => {
+  if (!r) return 0;
+  const d = r.data || {};
+
+  // Product score candidates
+  const productScore =
+    d.market_score ??
+    d.opportunity_score ??
+    d.score ??
+    d.chart_data?.market_score ??
+    d.chart_data?.score ??
+    0;
+
+  if (typeof productScore === 'number' && productScore > 0) {
+    return Math.min(productScore, 100);
+  }
+
+  // SEO score from trend or traffic
+  if (r.type === 'seo') {
+    if (d.trend_score === 'Evergreen') return 70;
+    if (d.trend_score === 'Seasonal') return 50;
+    const forecast = d.chart_data?.traffic_forecast_6m || d.chart_data?.traffic_growth_6m || d.chart_data?.traffic_forecast;
+    if (forecast && forecast.length > 0) {
+      const last = forecast[forecast.length - 1]?.traffic ?? forecast[forecast.length - 1] ?? 0;
+      return Math.min(Math.round(last / 1000), 100);
+    }
+  }
+
+  return 0;
+};
+
+const getProfitOrTraffic = (r: Report | null): number => {
+  if (!r) return 0;
+  const d = r.data || {};
+
+  // Product profit candidates
+  const profit =
+    d.financial_forecast?.month6_profit_optimistic ??
+    d.financial_projections?.month6_profit_optimistic ??
+    d.financial_forecast?.month6_profit_conservative ??
+    d.month6_profit ??
+    0;
+
+  // SEO traffic candidates
+  const traffic =
+    d.chart_data?.traffic_forecast_6m?.[5]?.traffic ??
+    d.chart_data?.traffic_growth_6m?.[5]?.traffic ??
+    d.chart_data?.traffic_forecast?.[5] ??
+    d.traffic?.[5] ??
+    0;
+
+  return r.type === 'product' ? profit : traffic;
+};
+
 export default function ComparePage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [selected1, setSelected1] = useState<string>('');
@@ -61,46 +116,6 @@ export default function ComparePage() {
         setLoading(false);
       });
   }, []);
-
-  // ─── Helper Functions (Fixed for SEO) ───
-  const getScore = (r: Report | null): number => {
-    if (!r) return 0;
-
-    // Product: direct market_score
-    if (r.type === 'product' && typeof r.data?.market_score === 'number') {
-      return r.data.market_score;
-    }
-
-    // SEO: use trend_score quality + traffic forecast
-    if (r.type === 'seo') {
-      const forecast = r.data?.chart_data?.traffic_forecast_6m || r.data?.chart_data?.traffic_growth_6m;
-      if (forecast && forecast.length > 0) {
-        const lastTraffic = forecast[forecast.length - 1]?.traffic || 0;
-        // Normalize: assume 100k visits = 100 score
-        return Math.min(Math.round(lastTraffic / 1000), 100);
-      }
-      if (r.data?.trend_score === 'Evergreen') return 70;
-      if (r.data?.trend_score === 'Seasonal') return 50;
-    }
-
-    return 0;
-  };
-
-  const getProfitOrTraffic = (r: Report | null): number => {
-    if (!r) return 0;
-
-    if (r.type === 'product') {
-      return r.data?.financial_forecast?.month6_profit_optimistic || 0;
-    }
-
-    // SEO: return total traffic from forecast
-    const forecast = r.data?.chart_data?.traffic_forecast_6m || r.data?.chart_data?.traffic_growth_6m;
-    if (forecast && forecast.length > 0) {
-      return forecast[forecast.length - 1]?.traffic || 0;
-    }
-
-    return 0;
-  };
 
   const handleCompare = () => {
     if (!selected1 || !selected2) {
