@@ -72,6 +72,12 @@ export default function Home() {
               History
             </Link>
             <Link
+              href="/compare"
+              className="text-sm text-neutral-400 hover:text-white transition-colors"
+            >
+              Compare
+            </Link>
+            <Link
               href="/product-research"
               className="text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white font-medium transition-all border border-white/10"
             >
@@ -89,7 +95,6 @@ export default function Home() {
 
       {/* Hero */}
       <section className="pt-36 pb-20 px-6 relative">
-        {/* Subtle background gradient */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.12),transparent_60%)]" />
         <div className="max-w-5xl mx-auto text-center relative">
           <motion.div
@@ -97,7 +102,6 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
           >
-            {/* Brand badge */}
             <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 mb-10">
               <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
               <span className="text-sm text-indigo-300 font-semibold tracking-wide">
@@ -131,6 +135,13 @@ export default function Home() {
               >
                 Product Research
                 <ArrowRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+              <Link
+                href="/compare"
+                className="group flex items-center gap-2 px-7 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold transition-all border border-white/15 backdrop-blur-sm"
+              >
+                Compare Reports
+                <BarChart3 size={18} className="group-hover:translate-x-0.5 transition-transform" />
               </Link>
             </div>
           </motion.div>
@@ -167,4 +178,4 @@ export default function Home() {
       </footer>
     </main>
   );
-      }
+}
