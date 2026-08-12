@@ -40,33 +40,39 @@ const flags: Record<string, string> = {
   sa: '🇸🇦', ae: '🇦🇪', pk: '🇵🇰', in: '🇮🇳', tr: '🇹🇷', my: '🇲🇾',
 };
 
-// ─── Robust Getters ───
+// ─── Working Getters ───
 const getScore = (r: Report | null): number => {
   if (!r) return 0;
   const d = r.data || {};
 
   // Product score
-  const productScore =
-    d.market_score ??
-    d.opportunity_score ??
-    d.score ??
-    d.chart_data?.market_score ??
-    d.chart_data?.score ??
-    0;
-
-  if (typeof productScore === 'number' && productScore > 0) {
-    return Math.min(productScore, 100);
+  if (r.type === 'product') {
+    const score =
+      d.market_score ??
+      d.opportunity_score ??
+      d.score ??
+      d.chart_data?.market_score ??
+      0;
+    return typeof score === 'number' ? Math.min(score, 100) : 0;
   }
 
-  // SEO score
+  // SEO score – combine multiple signals
   if (r.type === 'seo') {
-    if (d.trend_score === 'Evergreen') return 70;
-    if (d.trend_score === 'Seasonal') return 50;
+    let score = 0;
+
+    if (d.trend_score === 'Evergreen') score += 30;
+    else if (d.trend_score === 'Seasonal') score += 20;
+
+    const keywordCount = d.keywords?.length || 0;
+    score += Math.min(keywordCount, 50) * 0.8;
+
     const forecast = d.chart_data?.traffic_forecast_6m || d.chart_data?.traffic_growth_6m || d.chart_data?.traffic_forecast;
     if (forecast && forecast.length > 0) {
       const last = forecast[forecast.length - 1]?.traffic ?? forecast[forecast.length - 1] ?? 0;
-      return Math.min(Math.round(last / 1000), 100);
+      score += Math.min(Math.round(last / 1000), 30);
     }
+
+    return Math.min(Math.round(score), 100);
   }
 
   return 0;
@@ -76,21 +82,22 @@ const getProfitOrTraffic = (r: Report | null): number => {
   if (!r) return 0;
   const d = r.data || {};
 
-  const profit =
-    d.financial_forecast?.month6_profit_optimistic ??
-    d.financial_projections?.month6_profit_optimistic ??
-    d.financial_forecast?.month6_profit_conservative ??
-    d.month6_profit ??
-    0;
+  if (r.type === 'product') {
+    return (
+      d.financial_forecast?.month6_profit_optimistic ??
+      d.financial_projections?.month6_profit_optimistic ??
+      d.financial_forecast?.month6_profit_conservative ??
+      0
+    );
+  }
 
-  const traffic =
-    d.chart_data?.traffic_forecast_6m?.[5]?.traffic ??
-    d.chart_data?.traffic_growth_6m?.[5]?.traffic ??
-    d.chart_data?.traffic_forecast?.[5] ??
-    d.traffic?.[5] ??
-    0;
+  const forecast = d.chart_data?.traffic_forecast_6m || d.chart_data?.traffic_growth_6m || d.chart_data?.traffic_forecast;
+  if (forecast && forecast.length > 0) {
+    return forecast[forecast.length - 1]?.traffic ?? forecast[forecast.length - 1] ?? 0;
+  }
 
-  return r.type === 'product' ? profit : traffic;
+  const topVolumes = (d.keywords || []).slice(0, 10).reduce((sum: number, k: any) => sum + (k.volume || 0), 0);
+  return Math.round(topVolumes * 0.01);
 };
 
 export default function ComparePage() {
