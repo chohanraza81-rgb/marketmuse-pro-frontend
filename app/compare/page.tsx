@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
@@ -13,7 +13,6 @@ import {
   TrendingUp,
   Search,
   Trophy,
-  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import LiveStatus from '@/components/LiveStatus';
@@ -33,11 +32,9 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
 } from 'recharts';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production-a93c.up.railway.app/api';
-const COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
 interface Report {
   _id: string;
@@ -63,16 +60,17 @@ const pdfStyles = StyleSheet.create({
   cell: { flex: 1, border: '1px solid #cccccc', padding: 10, borderRadius: 4 },
   label: { fontSize: 10, color: '#666666', marginBottom: 4 },
   value: { fontSize: 12, fontWeight: 'bold', color: '#000000' },
-  table: { width: '100%', marginTop: 10 },
-  tableRow: { flexDirection: 'row', borderBottom: '1px solid #cccccc', paddingVertical: 5 },
-  tableCell: { flex: 1, fontSize: 10 },
 });
 
 function ComparisonPDF({ report1, report2 }: { report1: Report | null; report2: Report | null }) {
   if (!report1 || !report2) return null;
 
   const getScore = (r: Report) => r.data?.market_score ?? r.data?.trend_score ?? 0;
-  const getProfit = (r: Report) => r.data?.financial_forecast?.month6_profit_optimistic ?? r.data?.chart_data?.traffic_forecast_6m?.[5]?.traffic ?? 0;
+  const getProfitOrTraffic = (r: Report) => {
+    if (r.type === 'product') return r.data?.financial_forecast?.month6_profit_optimistic ?? 0;
+    const forecast = r.data?.chart_data?.traffic_forecast_6m ?? r.data?.chart_data?.traffic_growth_6m;
+    return forecast?.[forecast.length - 1]?.traffic ?? 0;
+  };
   const winner = getScore(report1) >= getScore(report2) ? report1.niche : report2.niche;
 
   return (
@@ -123,13 +121,13 @@ function ComparisonPDF({ report1, report2 }: { report1: Report | null; report2: 
           <View style={pdfStyles.cell}>
             <Text style={pdfStyles.label}>Est. Monthly Profit / Traffic</Text>
             <Text style={pdfStyles.value}>
-              {report1.type === 'product' ? `$${getProfit(report1).toLocaleString()}` : `${getProfit(report1).toLocaleString()} visits`}
+              {report1.type === 'product' ? `$${getProfitOrTraffic(report1).toLocaleString()}` : `${getProfitOrTraffic(report1).toLocaleString()} visits`}
             </Text>
           </View>
           <View style={pdfStyles.cell}>
             <Text style={pdfStyles.label}>Est. Monthly Profit / Traffic</Text>
             <Text style={pdfStyles.value}>
-              {report2.type === 'product' ? `$${getProfit(report2).toLocaleString()}` : `${getProfit(report2).toLocaleString()} visits`}
+              {report2.type === 'product' ? `$${getProfitOrTraffic(report2).toLocaleString()}` : `${getProfitOrTraffic(report2).toLocaleString()} visits`}
             </Text>
           </View>
         </View>
@@ -244,7 +242,9 @@ export default function ComparePage() {
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
                 <Sparkles size={18} className="text-white" />
               </div>
-              <span className="font-bold text-xl tracking-tight">Muse<span className="text-indigo-400">PRO</span></span>
+              <span className="font-bold text-xl tracking-tight">
+                Muse<span className="text-indigo-400">PRO</span>
+              </span>
             </Link>
             <LiveStatus />
           </div>
@@ -339,7 +339,7 @@ export default function ComparePage() {
                 document={<ComparisonPDF report1={report1} report2={report2} />}
                 fileName={`musePRO-comparison-${new Date().getTime()}.pdf`}
               >
-                {({ loading }) => (
+                {(({ loading }: { loading: boolean }) => (
                   <button
                     disabled={loading}
                     className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-all border border-white/15"
@@ -347,7 +347,7 @@ export default function ComparePage() {
                     <FileDown size={18} />
                     {loading ? 'Generating PDF...' : 'High‑Quality PDF'}
                   </button>
-                )}
+                )) as React.ReactNode}
               </PDFDownloadLink>
             </>
           )}
