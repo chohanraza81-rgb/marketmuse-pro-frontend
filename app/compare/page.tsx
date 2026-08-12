@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
@@ -10,20 +10,10 @@ import {
   FileDown,
   Download,
   BarChart3,
-  TrendingUp,
-  Search,
   Trophy,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import LiveStatus from '@/components/LiveStatus';
-import {
-  PDFDownloadLink,
-  Document,
-  Page,
-  Text,
-  View,
-  StyleSheet,
-} from '@react-pdf/renderer';
 import {
   BarChart,
   Bar,
@@ -49,97 +39,6 @@ const flags: Record<string, string> = {
   us: '🇺🇸', gb: '🇬🇧', ca: '🇨🇦', au: '🇦🇺', de: '🇩🇪', sg: '🇸🇬',
   sa: '🇸🇦', ae: '🇦🇪', pk: '🇵🇰', in: '🇮🇳', tr: '🇹🇷', my: '🇲🇾',
 };
-
-// ─── PDF Styles ───
-const pdfStyles = StyleSheet.create({
-  page: { backgroundColor: '#FFFFFF', padding: 30, fontFamily: 'Helvetica' },
-  header: { fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: '#111111' },
-  subtitle: { fontSize: 12, color: '#444444', marginBottom: 20 },
-  sectionTitle: { fontSize: 14, fontWeight: 'bold', marginTop: 15, marginBottom: 5, color: '#333333' },
-  row: { flexDirection: 'row', gap: 20, marginBottom: 10 },
-  cell: { flex: 1, border: '1px solid #cccccc', padding: 10, borderRadius: 4 },
-  label: { fontSize: 10, color: '#666666', marginBottom: 4 },
-  value: { fontSize: 12, fontWeight: 'bold', color: '#000000' },
-});
-
-function ComparisonPDF({ report1, report2 }: { report1: Report | null; report2: Report | null }) {
-  if (!report1 || !report2) return null;
-
-  const getScore = (r: Report) => r.data?.market_score ?? r.data?.trend_score ?? 0;
-  const getProfitOrTraffic = (r: Report) => {
-    if (r.type === 'product') return r.data?.financial_forecast?.month6_profit_optimistic ?? 0;
-    const forecast = r.data?.chart_data?.traffic_forecast_6m ?? r.data?.chart_data?.traffic_growth_6m;
-    return forecast?.[forecast.length - 1]?.traffic ?? 0;
-  };
-  const winner = getScore(report1) >= getScore(report2) ? report1.niche : report2.niche;
-
-  return (
-    <Document>
-      <Page size="A4" style={pdfStyles.page}>
-        <Text style={pdfStyles.header}>MusePRO — Report Comparison</Text>
-        <Text style={pdfStyles.subtitle}>Generated on {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
-
-        <View style={pdfStyles.row}>
-          <View style={pdfStyles.cell}>
-            <Text style={pdfStyles.label}>REPORT 1</Text>
-            <Text style={pdfStyles.value}>{report1.niche} ({report1.country.toUpperCase()})</Text>
-            <Text style={pdfStyles.value}>Type: {report1.type}</Text>
-          </View>
-          <View style={pdfStyles.cell}>
-            <Text style={pdfStyles.label}>REPORT 2</Text>
-            <Text style={pdfStyles.value}>{report2.niche} ({report2.country.toUpperCase()})</Text>
-            <Text style={pdfStyles.value}>Type: {report2.type}</Text>
-          </View>
-        </View>
-
-        <Text style={pdfStyles.sectionTitle}>Market Score Comparison</Text>
-        <View style={pdfStyles.row}>
-          <View style={pdfStyles.cell}>
-            <Text style={pdfStyles.label}>Score 1</Text>
-            <Text style={pdfStyles.value}>{getScore(report1)}/100</Text>
-          </View>
-          <View style={pdfStyles.cell}>
-            <Text style={pdfStyles.label}>Score 2</Text>
-            <Text style={pdfStyles.value}>{getScore(report2)}/100</Text>
-          </View>
-        </View>
-
-        <Text style={pdfStyles.sectionTitle}>Opportunity Level</Text>
-        <View style={pdfStyles.row}>
-          <View style={pdfStyles.cell}>
-            <Text style={pdfStyles.label}>Report 1</Text>
-            <Text style={pdfStyles.value}>{report1.data?.opportunity_level || report1.data?.trend_assessment || report1.data?.trend_score || 'N/A'}</Text>
-          </View>
-          <View style={pdfStyles.cell}>
-            <Text style={pdfStyles.label}>Report 2</Text>
-            <Text style={pdfStyles.value}>{report2.data?.opportunity_level || report2.data?.trend_assessment || report2.data?.trend_score || 'N/A'}</Text>
-          </View>
-        </View>
-
-        <Text style={pdfStyles.sectionTitle}>Financial / Traffic Projection</Text>
-        <View style={pdfStyles.row}>
-          <View style={pdfStyles.cell}>
-            <Text style={pdfStyles.label}>Est. Monthly Profit / Traffic</Text>
-            <Text style={pdfStyles.value}>
-              {report1.type === 'product' ? `$${getProfitOrTraffic(report1).toLocaleString()}` : `${getProfitOrTraffic(report1).toLocaleString()} visits`}
-            </Text>
-          </View>
-          <View style={pdfStyles.cell}>
-            <Text style={pdfStyles.label}>Est. Monthly Profit / Traffic</Text>
-            <Text style={pdfStyles.value}>
-              {report2.type === 'product' ? `$${getProfitOrTraffic(report2).toLocaleString()}` : `${getProfitOrTraffic(report2).toLocaleString()} visits`}
-            </Text>
-          </View>
-        </View>
-
-        <Text style={pdfStyles.sectionTitle}>Winner</Text>
-        <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#111111' }}>
-          {winner} is the stronger opportunity.
-        </Text>
-      </Page>
-    </Document>
-  );
-}
 
 export default function ComparePage() {
   const [reports, setReports] = useState<Report[]>([]);
@@ -225,6 +124,46 @@ export default function ComparePage() {
     a.click();
     URL.revokeObjectURL(url);
     toast.success('Comparison CSV downloaded');
+  };
+
+  const handleExportPDF = () => {
+    if (!report1 || !report2) {
+      toast.error('No comparison to export');
+      return;
+    }
+    const w = window.open('', '_blank');
+    if (!w) {
+      toast.error('Allow pop-ups for PDF');
+      return;
+    }
+    w.document.write(`
+      <html>
+        <head><title>MusePRO — Report Comparison</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 40px; color: #111; }
+          h1 { font-size: 22px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ccc; padding: 12px; text-align: left; }
+          th { background: #f5f5f5; }
+          .winner { color: green; font-weight: bold; margin-top: 20px; }
+        </style>
+        </head>
+        <body>
+          <h1>MusePRO — Report Comparison</h1>
+          <p>Generated on ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          <table>
+            <tr><th>Metric</th><th>${report1.niche}</th><th>${report2.niche}</th></tr>
+            <tr><td>Market Score</td><td>${getScore(report1)}/100</td><td>${getScore(report2)}/100</td></tr>
+            <tr><td>Opportunity Level</td><td>${report1.data?.opportunity_level || report1.data?.trend_assessment || 'N/A'}</td><td>${report2.data?.opportunity_level || report2.data?.trend_assessment || 'N/A'}</td></tr>
+            <tr><td>Est. Monthly Profit / Traffic</td><td>${report1.type === 'product' ? `$${getProfitOrTraffic(report1).toLocaleString()}` : `${getProfitOrTraffic(report1).toLocaleString()} visits`}</td><td>${report2.type === 'product' ? `$${getProfitOrTraffic(report2).toLocaleString()}` : `${getProfitOrTraffic(report2).toLocaleString()} visits`}</td></tr>
+          </table>
+          <p class="winner">Winner: ${getScore(report1) >= getScore(report2) ? report1.niche : report2.niche}</p>
+        </body>
+      </html>
+    `);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 500);
   };
 
   const comparisonData = report1 && report2 ? [
@@ -335,20 +274,13 @@ export default function ComparePage() {
                 <Download size={18} />
                 Export CSV
               </button>
-              <PDFDownloadLink
-                document={<ComparisonPDF report1={report1} report2={report2} />}
-                fileName={`musePRO-comparison-${new Date().getTime()}.pdf`}
+              <button
+                onClick={handleExportPDF}
+                className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-all border border-white/15"
               >
-                {(({ loading }: { loading: boolean }) => (
-                  <button
-                    disabled={loading}
-                    className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-all border border-white/15"
-                  >
-                    <FileDown size={18} />
-                    {loading ? 'Generating PDF...' : 'High‑Quality PDF'}
-                  </button>
-                )) as React.ReactNode}
-              </PDFDownloadLink>
+                <FileDown size={18} />
+                High‑Quality PDF
+              </button>
             </>
           )}
         </div>
