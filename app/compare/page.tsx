@@ -40,12 +40,12 @@ const flags: Record<string, string> = {
   sa: '🇸🇦', ae: '🇦🇪', pk: '🇵🇰', in: '🇮🇳', tr: '🇹🇷', my: '🇲🇾',
 };
 
-// ─── Robust Getter Functions ───
+// ─── Robust Getters ───
 const getScore = (r: Report | null): number => {
   if (!r) return 0;
   const d = r.data || {};
 
-  // Product score candidates
+  // Product score
   const productScore =
     d.market_score ??
     d.opportunity_score ??
@@ -58,7 +58,7 @@ const getScore = (r: Report | null): number => {
     return Math.min(productScore, 100);
   }
 
-  // SEO score from trend or traffic
+  // SEO score
   if (r.type === 'seo') {
     if (d.trend_score === 'Evergreen') return 70;
     if (d.trend_score === 'Seasonal') return 50;
@@ -76,7 +76,6 @@ const getProfitOrTraffic = (r: Report | null): number => {
   if (!r) return 0;
   const d = r.data || {};
 
-  // Product profit candidates
   const profit =
     d.financial_forecast?.month6_profit_optimistic ??
     d.financial_projections?.month6_profit_optimistic ??
@@ -84,7 +83,6 @@ const getProfitOrTraffic = (r: Report | null): number => {
     d.month6_profit ??
     0;
 
-  // SEO traffic candidates
   const traffic =
     d.chart_data?.traffic_forecast_6m?.[5]?.traffic ??
     d.chart_data?.traffic_growth_6m?.[5]?.traffic ??
@@ -117,16 +115,32 @@ export default function ComparePage() {
       });
   }, []);
 
-  const handleCompare = () => {
+  const handleCompare = async () => {
     if (!selected1 || !selected2) {
       toast.error('Please select both reports');
       return;
     }
-    const r1 = reports.find((r) => r._id === selected1) || null;
-    const r2 = reports.find((r) => r._id === selected2) || null;
-    setReport1(r1);
-    setReport2(r2);
-    if (r1 && r2) toast.success('Comparison ready');
+
+    try {
+      const [res1, res2] = await Promise.all([
+        fetch(`${API_URL}/reports/${selected1}`),
+        fetch(`${API_URL}/reports/${selected2}`),
+      ]);
+
+      if (!res1.ok || !res2.ok) {
+        toast.error('Failed to fetch full reports');
+        return;
+      }
+
+      const r1 = await res1.json();
+      const r2 = await res2.json();
+
+      setReport1(r1);
+      setReport2(r2);
+      toast.success('Comparison ready');
+    } catch {
+      toast.error('Something went wrong');
+    }
   };
 
   const handleCopyMarkdown = async () => {
@@ -240,11 +254,7 @@ export default function ComparePage() {
         </Link>
 
         <div className="text-center mb-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
                 Report Comparison
@@ -258,31 +268,19 @@ export default function ComparePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
           <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800/60">
             <label className="block text-sm font-semibold text-indigo-300 mb-3">Report 1</label>
-            <select
-              value={selected1}
-              onChange={(e) => setSelected1(e.target.value)}
-              className="w-full bg-[#171717] border border-neutral-800 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50"
-            >
+            <select value={selected1} onChange={(e) => setSelected1(e.target.value)} className="w-full bg-[#171717] border border-neutral-800 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500/50">
               <option value="">Select report...</option>
               {reports.map((r) => (
-                <option key={r._id} value={r._id}>
-                  {r.niche} — {r.type.toUpperCase()} ({flags[r.country]})
-                </option>
+                <option key={r._id} value={r._id}>{r.niche} — {r.type.toUpperCase()} ({flags[r.country]})</option>
               ))}
             </select>
           </div>
           <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800/60">
             <label className="block text-sm font-semibold text-purple-300 mb-3">Report 2</label>
-            <select
-              value={selected2}
-              onChange={(e) => setSelected2(e.target.value)}
-              className="w-full bg-[#171717] border border-neutral-800 rounded-xl px-4 py-3 text-white outline-none focus:border-purple-500/50"
-            >
+            <select value={selected2} onChange={(e) => setSelected2(e.target.value)} className="w-full bg-[#171717] border border-neutral-800 rounded-xl px-4 py-3 text-white outline-none focus:border-purple-500/50">
               <option value="">Select report...</option>
               {reports.map((r) => (
-                <option key={r._id} value={r._id}>
-                  {r.niche} — {r.type.toUpperCase()} ({flags[r.country]})
-                </option>
+                <option key={r._id} value={r._id}>{r.niche} — {r.type.toUpperCase()} ({flags[r.country]})</option>
               ))}
             </select>
           </div>
@@ -290,34 +288,20 @@ export default function ComparePage() {
 
         {/* Action Buttons */}
         <div className="flex flex-wrap justify-center gap-3 mb-12">
-          <button
-            onClick={handleCompare}
-            className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold transition-all shadow-lg shadow-indigo-600/30"
-          >
+          <button onClick={handleCompare} className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold transition-all shadow-lg shadow-indigo-600/30">
             Compare Reports
           </button>
           {report1 && report2 && (
             <>
-              <button
-                onClick={handleCopyMarkdown}
-                className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-all border border-white/15"
-              >
+              <button onClick={handleCopyMarkdown} className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-all border border-white/15">
                 {copied ? <Check size={18} /> : <Copy size={18} />}
                 {copied ? 'Copied Markdown' : 'Copy Markdown'}
               </button>
-              <button
-                onClick={handleExportCSV}
-                className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-all border border-white/15"
-              >
-                <Download size={18} />
-                Export CSV
+              <button onClick={handleExportCSV} className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-all border border-white/15">
+                <Download size={18} /> Export CSV
               </button>
-              <button
-                onClick={handleExportPDF}
-                className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-all border border-white/15"
-              >
-                <FileDown size={18} />
-                High‑Quality PDF
+              <button onClick={handleExportPDF} className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-all border border-white/15">
+                <FileDown size={18} /> High‑Quality PDF
               </button>
             </>
           )}
@@ -344,20 +328,10 @@ export default function ComparePage() {
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Report 1 */}
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4 }}
-                className={`p-6 rounded-2xl border-2 ${
-                  getScore(report1) >= getScore(report2)
-                    ? 'border-emerald-500/50 bg-emerald-500/5'
-                    : 'border-neutral-800 bg-[#0F0F14]'
-                }`}
-              >
+              <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}
+                className={`p-6 rounded-2xl border-2 ${getScore(report1) >= getScore(report2) ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-neutral-800 bg-[#0F0F14]'}`}>
                 <div className="flex items-center justify-between mb-4">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${report1.type === 'product' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-indigo-500/20 text-indigo-400'}`}>
-                    {report1.type.toUpperCase()}
-                  </span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${report1.type === 'product' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-indigo-500/20 text-indigo-400'}`}>{report1.type.toUpperCase()}</span>
                   <span className="text-sm text-neutral-400">{flags[report1.country]} {report1.country.toUpperCase()}</span>
                 </div>
                 <h3 className="text-xl font-bold capitalize mb-4">{report1.niche}</h3>
@@ -365,36 +339,21 @@ export default function ComparePage() {
                   <div>
                     <p className="text-neutral-500">Market Score</p>
                     <div className="flex items-center gap-3">
-                      <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${getScore(report1)}%` }} />
-                      </div>
+                      <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden"><div className="h-full bg-indigo-500 rounded-full" style={{ width: `${getScore(report1)}%` }} /></div>
                       <span className="font-mono font-bold">{getScore(report1)}/100</span>
                     </div>
                   </div>
                   <p><span className="text-neutral-500">Opportunity:</span> <strong>{report1.data?.opportunity_level || report1.data?.trend_assessment || report1.data?.trend_score || 'N/A'}</strong></p>
-                  <p>
-                    <span className="text-neutral-500">{report1.type === 'product' ? 'Est. Monthly Profit:' : 'Est. 6‑Month Traffic:'}</span>{' '}
-                    <strong>{report1.type === 'product' ? `$${getProfitOrTraffic(report1).toLocaleString()}` : `${getProfitOrTraffic(report1).toLocaleString()} visits`}</strong>
-                  </p>
+                  <p><span className="text-neutral-500">{report1.type === 'product' ? 'Est. Monthly Profit:' : 'Est. 6‑Month Traffic:'}</span> <strong>{report1.type === 'product' ? `$${getProfitOrTraffic(report1).toLocaleString()}` : `${getProfitOrTraffic(report1).toLocaleString()} visits`}</strong></p>
                   <p><span className="text-neutral-500">Risks:</span> <strong>{(report1.data?.risk_matrix || report1.data?.risk_radar || []).length}</strong></p>
                 </div>
               </motion.div>
 
               {/* Report 2 */}
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4 }}
-                className={`p-6 rounded-2xl border-2 ${
-                  getScore(report2) > getScore(report1)
-                    ? 'border-emerald-500/50 bg-emerald-500/5'
-                    : 'border-neutral-800 bg-[#0F0F14]'
-                }`}
-              >
+              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}
+                className={`p-6 rounded-2xl border-2 ${getScore(report2) > getScore(report1) ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-neutral-800 bg-[#0F0F14]'}`}>
                 <div className="flex items-center justify-between mb-4">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${report2.type === 'product' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-indigo-500/20 text-indigo-400'}`}>
-                    {report2.type.toUpperCase()}
-                  </span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${report2.type === 'product' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-indigo-500/20 text-indigo-400'}`}>{report2.type.toUpperCase()}</span>
                   <span className="text-sm text-neutral-400">{flags[report2.country]} {report2.country.toUpperCase()}</span>
                 </div>
                 <h3 className="text-xl font-bold capitalize mb-4">{report2.niche}</h3>
@@ -402,17 +361,12 @@ export default function ComparePage() {
                   <div>
                     <p className="text-neutral-500">Market Score</p>
                     <div className="flex items-center gap-3">
-                      <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-purple-500 rounded-full" style={{ width: `${getScore(report2)}%` }} />
-                      </div>
+                      <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden"><div className="h-full bg-purple-500 rounded-full" style={{ width: `${getScore(report2)}%` }} /></div>
                       <span className="font-mono font-bold">{getScore(report2)}/100</span>
                     </div>
                   </div>
                   <p><span className="text-neutral-500">Opportunity:</span> <strong>{report2.data?.opportunity_level || report2.data?.trend_assessment || report2.data?.trend_score || 'N/A'}</strong></p>
-                  <p>
-                    <span className="text-neutral-500">{report2.type === 'product' ? 'Est. Monthly Profit:' : 'Est. 6‑Month Traffic:'}</span>{' '}
-                    <strong>{report2.type === 'product' ? `$${getProfitOrTraffic(report2).toLocaleString()}` : `${getProfitOrTraffic(report2).toLocaleString()} visits`}</strong>
-                  </p>
+                  <p><span className="text-neutral-500">{report2.type === 'product' ? 'Est. Monthly Profit:' : 'Est. 6‑Month Traffic:'}</span> <strong>{report2.type === 'product' ? `$${getProfitOrTraffic(report2).toLocaleString()}` : `${getProfitOrTraffic(report2).toLocaleString()} visits`}</strong></p>
                   <p><span className="text-neutral-500">Risks:</span> <strong>{(report2.data?.risk_matrix || report2.data?.risk_radar || []).length}</strong></p>
                 </div>
               </motion.div>
@@ -434,9 +388,7 @@ export default function ComparePage() {
             </div>
           </div>
         ) : (
-          <div className="text-center py-20 text-neutral-500">
-            Select two reports and click <strong className="text-indigo-400">Compare Reports</strong> to see the battle.
-          </div>
+          <div className="text-center py-20 text-neutral-500">Select two reports and click <strong className="text-indigo-400">Compare Reports</strong> to see the battle.</div>
         )}
       </div>
     </main>
