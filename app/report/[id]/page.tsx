@@ -4,14 +4,32 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
-  Sparkles, ArrowLeft, Copy, Check, FileDown, Download, TrendingUp, Search,
+  Sparkles,
+  ArrowLeft,
+  Copy,
+  Check,
+  FileDown,
+  Download,
+  TrendingUp,
+  Search,
+  Loader2,   // ✅ Loader2 import added
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
 import LiveStatus from '@/components/LiveStatus';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, AreaChart, Area,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  AreaChart,
+  Area,
 } from 'recharts';
 
 const COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
@@ -27,9 +45,12 @@ export default function UnifiedReportPage() {
   useEffect(() => {
     if (!id) return;
     fetch(`${API_URL}/reports/${id}`)
-      .then(res => res.ok ? res.json() : Promise.reject('Report not found'))
-      .then(data => setReport(data))
-      .catch(err => setError(err.message || 'Error'))
+      .then((res) => {
+        if (!res.ok) throw new Error('Report not found');
+        return res.json();
+      })
+      .then((data) => setReport(data))
+      .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -43,29 +64,79 @@ export default function UnifiedReportPage() {
   const handleExportPDF = () => {
     if (!report) return;
     const w = window.open('', '_blank');
-    if (!w) { toast.error('Allow pop-ups'); return; }
+    if (!w) {
+      toast.error('Allow pop-ups');
+      return;
+    }
     w.document.write(`<html><head><title>MusePRO Report</title><style>body{font-family:Arial;padding:40px;color:#000}pre{white-space:pre-wrap;font-size:12px}</style></head><body><h1>${report.type === 'product' ? 'Product Research' : 'SEO Analysis'}: ${report.niche}</h1><pre>${report.markdown}</pre></body></html>`);
-    w.document.close(); w.focus(); setTimeout(() => w.print(), 500);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 500);
   };
 
   const handleExportCSV = () => {
-    if (!report?.data) return toast.error('No data');
+    if (!report?.data) {
+      toast.error('No data');
+      return;
+    }
     let rows: any[] = [];
     if (report.type === 'product' && report.data.realProducts) {
-      rows = report.data.realProducts.map((p: any) => ({ Product: p.title, Price: p.price, Reviews: p.reviews, Source: p.source }));
+      rows = report.data.realProducts.map((p: any) => ({
+        Product: p.title,
+        Price: p.price,
+        Reviews: p.reviews,
+        Source: p.source,
+      }));
     } else if (report.type === 'seo' && report.data.keywords) {
-      rows = report.data.keywords.map((k: any) => ({ Keyword: k.keyword, Volume: k.volume ?? 'N/A', CPC: k.cpc ?? 'N/A', KD: k.kd ?? 'N/A' }));
+      rows = report.data.keywords.map((k: any) => ({
+        Keyword: k.keyword,
+        Volume: k.volume ?? 'Not Disclosed',
+        CPC: k.cpc ?? 'Not Disclosed',
+        KD: k.kd ?? 'Not Disclosed',
+      }));
     }
-    if (rows.length) {
+    if (rows.length > 0) {
       const csv = [Object.keys(rows[0]).join(','), ...rows.map((r: any) => Object.values(r).join(','))].join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = `${report.type}-${report.niche}.csv`; a.click(); URL.revokeObjectURL(url);
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${report.type}-${report.niche}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
       toast.success('CSV downloaded');
-    } else toast.error('No exportable data');
+    } else {
+      toast.error('No exportable data');
+    }
   };
 
-  if (loading) return <main className="min-h-screen bg-[#0A0A0A] flex items-center justify-center"><Loader2 size={32} className="animate-spin text-indigo-400" /></main>;
-  if (error || !report) return <main className="min-h-screen bg-[#0A0A0A] flex items-center justify-center text-red-400"><div className="text-center"><p className="text-xl mb-4">Report not found</p><Link href="/history" className="text-indigo-400">← Back</Link></div></main>;
+  const handleShare = async () => {
+    if (navigator.share) {
+      await navigator.share({ title: `MusePRO Report: ${report.niche}`, url: window.location.href }).catch(() => {});
+    } else {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success('Link copied');
+    }
+  };
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
+        <Loader2 size={32} className="animate-spin text-indigo-400" />
+      </main>
+    );
+  }
+
+  if (error || !report) {
+    return (
+      <main className="min-h-screen bg-[#0A0A0A] flex items-center justify-center text-red-400">
+        <div className="text-center">
+          <p className="text-xl mb-4">Report not found</p>
+          <Link href="/history" className="text-indigo-400">← Back to History</Link>
+        </div>
+      </main>
+    );
+  }
 
   const isProduct = report.type === 'product';
   const data = report.data || {};
@@ -73,16 +144,17 @@ export default function UnifiedReportPage() {
   const realProducts = data.realProducts || [];
   const serpResults = data.serpResults || data.serp || [];
 
-  // Chart data
-  const trendLine = data.chart_data?.trend_12m?.map((v: number, i: number) => ({ month: `M${i+1}`, value: v })) || [];
-  const trafficForecast = data.chart_data?.traffic_forecast_6m?.map((v: number, i: number) => ({ month: `M${i+1}`, traffic: v })) || data.chart_data?.traffic_growth_6m?.map((v: number, i: number) => ({ month: `M${i+1}`, traffic: v })) || [];
+  const trendLine = data.chart_data?.trend_12m?.map((v: number, i: number) => ({ month: `M${i + 1}`, value: v })) || [];
+  const trafficForecast = data.chart_data?.traffic_forecast_6m?.map((v: number, i: number) => ({ month: `M${i + 1}`, traffic: v })) || data.chart_data?.traffic_growth_6m?.map((v: number, i: number) => ({ month: `M${i + 1}`, traffic: v })) || [];
   const marketShare = data.chart_data?.competitor_market_share || [];
 
-  const score = isProduct ? (data.market_score || data.opportunity_score || data.score || 0) : (data.trend_score === 'Evergreen' ? 70 : data.trend_score === 'Seasonal' ? 50 : trafficForecast.length ? Math.min(Math.round(trafficForecast[trafficForecast.length-1]?.traffic / 1000), 100) : 0);
+  const score = isProduct
+    ? (data.market_score || data.opportunity_score || data.score || 0)
+    : (data.trend_score === 'Evergreen' ? 70 : data.trend_score === 'Seasonal' ? 50 : trafficForecast.length ? Math.min(Math.round(trafficForecast[trafficForecast.length - 1]?.traffic / 1000), 100) : 0);
 
   const getProfitOrTraffic = () => {
     if (isProduct) return data.financial_forecast?.month6_profit_optimistic || data.financial_forecast?.month6_profit_conservative || 0;
-    return trafficForecast.length ? trafficForecast[trafficForecast.length-1]?.traffic || 0 : 0;
+    return trafficForecast.length ? trafficForecast[trafficForecast.length - 1]?.traffic || 0 : 0;
   };
 
   const SectionCopyButton = ({ label, text }: { label: string; text: string }) => (
@@ -97,12 +169,13 @@ export default function UnifiedReportPage() {
 
   return (
     <main className="min-h-screen bg-[#0A0A0A] text-white font-['Inter']">
-      {/* Navbar */}
       <nav className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-neutral-800">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center"><Sparkles size={16} className="text-white" /></div>
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                <Sparkles size={16} className="text-white" />
+              </div>
               <span className="font-bold text-lg">Muse<span className="text-indigo-400">PRO</span></span>
             </Link>
             <LiveStatus />
@@ -125,6 +198,7 @@ export default function UnifiedReportPage() {
         <div className="flex gap-2">
           <button onClick={handleExportPDF} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm"><FileDown size={14} />PDF</button>
           <button onClick={handleExportCSV} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm"><Download size={14} />CSV</button>
+          <button onClick={handleShare} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm"><Check size={14} />Share</button>
         </div>
       </div>
 
@@ -136,9 +210,7 @@ export default function UnifiedReportPage() {
               <p className="text-xs text-neutral-400">{isProduct ? 'OPPORTUNITY SCORE' : 'TREND'}</p>
               <SectionCopyButton label={isProduct ? 'Opportunity Score' : 'Trend'} text={isProduct ? `${score}/100` : (data.trend_assessment || data.trend_score || 'N/A')} />
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold font-mono">{isProduct ? `${score}/100` : (data.trend_assessment || data.trend_score || 'N/A')}</span>
-            </div>
+            <p className="text-3xl font-bold font-mono">{isProduct ? `${score}/100` : (data.trend_assessment || data.trend_score || 'N/A')}</p>
             {isProduct && <div className="mt-2 w-full h-1.5 rounded-full bg-neutral-800"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${score}%` }} /></div>}
           </div>
           {isProduct ? (
@@ -177,9 +249,9 @@ export default function UnifiedReportPage() {
               <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs text-neutral-400">6-MONTH TRAFFIC EST.</p>
-                  <SectionCopyButton label="Traffic Estimate" text={`${trafficForecast.length ? trafficForecast[trafficForecast.length-1]?.traffic.toLocaleString() : 'N/A'} visits`} />
+                  <SectionCopyButton label="Traffic Estimate" text={`${trafficForecast.length ? trafficForecast[trafficForecast.length - 1]?.traffic.toLocaleString() : 'N/A'} visits`} />
                 </div>
-                <p className="text-2xl font-bold font-mono">{trafficForecast.length ? trafficForecast[trafficForecast.length-1]?.traffic.toLocaleString() : 'N/A'}</p>
+                <p className="text-2xl font-bold font-mono">{trafficForecast.length ? trafficForecast[trafficForecast.length - 1]?.traffic.toLocaleString() : 'N/A'}</p>
               </div>
             </>
           )}
@@ -235,7 +307,7 @@ export default function UnifiedReportPage() {
           )}
         </div>
 
-        {/* Data Tables with Copy */}
+        {/* Data Tables */}
         {isProduct && realProducts.length > 0 && (
           <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800 mb-8">
             <div className="flex items-center justify-between mb-3">
@@ -245,7 +317,7 @@ export default function UnifiedReportPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
                 <thead><tr className="border-b border-neutral-700 text-neutral-400"><th className="text-left py-2 px-3">#</th><th className="text-left py-2 px-3">Product</th><th className="text-left py-2 px-3">Price</th><th className="text-left py-2 px-3">Reviews</th><th className="text-left py-2 px-3">Source</th></tr></thead>
-                <tbody>{realProducts.map((p: any, i: number) => <tr key={i} className="border-b border-neutral-800"><td className="py-2 px-3">{i+1}</td><td className="py-2 px-3">{p.title}</td><td className="py-2 px-3">${p.price.toLocaleString()}</td><td className="py-2 px-3">{p.reviews}</td><td className="py-2 px-3">{p.source}</td></tr>)}</tbody>
+                <tbody>{realProducts.map((p: any, i: number) => <tr key={i} className="border-b border-neutral-800"><td className="py-2 px-3">{i + 1}</td><td className="py-2 px-3">{p.title}</td><td className="py-2 px-3">${p.price.toLocaleString()}</td><td className="py-2 px-3">{p.reviews}</td><td className="py-2 px-3">{p.source}</td></tr>)}</tbody>
               </table>
             </div>
           </div>
@@ -255,12 +327,12 @@ export default function UnifiedReportPage() {
           <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800 mb-8">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold">KEYWORDS WORTH TARGETING</h3>
-              <SectionCopyButton label="Keywords Table" text={keywords.map((k: any) => `${k.keyword} | Volume: ${k.volume ?? 'N/A'} | CPC: ${k.cpc ?? 'N/A'} | KD: ${k.kd ?? 'N/A'}`).join('\n')} />
+              <SectionCopyButton label="Keywords Table" text={keywords.map((k: any) => `${k.keyword} | Volume: ${k.volume ?? 'Not Disclosed'} | CPC: ${k.cpc ?? 'Not Disclosed'} | KD: ${k.kd ?? 'Not Disclosed'}`).join('\n')} />
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
                 <thead><tr className="border-b border-neutral-700 text-neutral-400"><th className="text-left py-2 px-3">#</th><th className="text-left py-2 px-3">Keyword</th><th className="text-left py-2 px-3">Volume</th><th className="text-left py-2 px-3">CPC</th><th className="text-left py-2 px-3">KD</th></tr></thead>
-                <tbody>{keywords.slice(0,50).map((k: any, i: number) => <tr key={i} className="border-b border-neutral-800"><td className="py-2 px-3">{i+1}</td><td className="py-2 px-3">{k.keyword}</td><td className="py-2 px-3">{k.volume?.toLocaleString() ?? 'N/A'}</td><td className="py-2 px-3">{k.cpc ? `$${k.cpc.toFixed(2)}` : 'N/A'}</td><td className="py-2 px-3">{k.kd ?? 'N/A'}</td></tr>)}</tbody>
+                <tbody>{keywords.slice(0, 50).map((k: any, i: number) => <tr key={i} className="border-b border-neutral-800"><td className="py-2 px-3">{i + 1}</td><td className="py-2 px-3">{k.keyword}</td><td className="py-2 px-3">{k.volume?.toLocaleString() ?? 'Not Disclosed'}</td><td className="py-2 px-3">{k.cpc ? `$${k.cpc.toFixed(2)}` : 'Not Disclosed'}</td><td className="py-2 px-3">{k.kd ?? 'Not Disclosed'}</td></tr>)}</tbody>
               </table>
             </div>
           </div>
