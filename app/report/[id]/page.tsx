@@ -4,14 +4,14 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
-  Sparkles, ArrowLeft, Share2, Loader2, Copy, Check, FileDown, Download, TrendingUp, Search
+  Sparkles, ArrowLeft, Copy, Check, FileDown, Download, TrendingUp, Search,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
 import LiveStatus from '@/components/LiveStatus';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, AreaChart, Area
+  PieChart, Pie, Cell, AreaChart, Area,
 } from 'recharts';
 
 const COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
@@ -22,26 +22,22 @@ export default function UnifiedReportPage() {
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState('');
 
   useEffect(() => {
     if (!id) return;
     fetch(`${API_URL}/reports/${id}`)
-      .then(res => {
-        if (!res.ok) throw new Error('Report not found');
-        return res.json();
-      })
+      .then(res => res.ok ? res.json() : Promise.reject('Report not found'))
       .then(data => setReport(data))
-      .catch(err => setError(err.message))
+      .catch(err => setError(err.message || 'Error'))
       .finally(() => setLoading(false));
   }, [id]);
 
-  const handleCopyAll = async () => {
-    if (!report?.markdown) return;
-    await navigator.clipboard.writeText(report.markdown);
-    setCopied(true);
-    toast.success('Report copied');
-    setTimeout(() => setCopied(false), 2000);
+  const copyText = async (text: string, label: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopied(label);
+    toast.success(`${label} copied`);
+    setTimeout(() => setCopied(''), 2000);
   };
 
   const handleExportPDF = () => {
@@ -49,74 +45,59 @@ export default function UnifiedReportPage() {
     const w = window.open('', '_blank');
     if (!w) { toast.error('Allow pop-ups'); return; }
     w.document.write(`<html><head><title>MusePRO Report</title><style>body{font-family:Arial;padding:40px;color:#000}pre{white-space:pre-wrap;font-size:12px}</style></head><body><h1>${report.type === 'product' ? 'Product Research' : 'SEO Analysis'}: ${report.niche}</h1><pre>${report.markdown}</pre></body></html>`);
-    w.document.close();
-    w.focus();
-    setTimeout(() => w.print(), 500);
+    w.document.close(); w.focus(); setTimeout(() => w.print(), 500);
   };
 
   const handleExportCSV = () => {
-    if (!report?.data) { toast.error('No data'); return; }
+    if (!report?.data) return toast.error('No data');
+    let rows: any[] = [];
     if (report.type === 'product' && report.data.realProducts) {
-      const rows = report.data.realProducts.map((p: any) => ({
-        Product: p.title, Price: p.price, Reviews: p.reviews, Source: p.source
-      }));
-      const csv = [Object.keys(rows[0]).join(','), ...rows.map((r: any) => Object.values(r).join(','))].join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = `product-${report.niche}.csv`; a.click(); URL.revokeObjectURL(url);
-      toast.success('CSV downloaded');
+      rows = report.data.realProducts.map((p: any) => ({ Product: p.title, Price: p.price, Reviews: p.reviews, Source: p.source }));
     } else if (report.type === 'seo' && report.data.keywords) {
-      const rows = report.data.keywords.map((k: any) => ({
-        Keyword: k.keyword, Volume: k.volume, CPC: k.cpc, KD: k.kd
-      }));
+      rows = report.data.keywords.map((k: any) => ({ Keyword: k.keyword, Volume: k.volume ?? 'N/A', CPC: k.cpc ?? 'N/A', KD: k.kd ?? 'N/A' }));
+    }
+    if (rows.length) {
       const csv = [Object.keys(rows[0]).join(','), ...rows.map((r: any) => Object.values(r).join(','))].join('\n');
       const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = `seo-${report.niche}.csv`; a.click(); URL.revokeObjectURL(url);
+      const a = document.createElement('a'); a.href = url; a.download = `${report.type}-${report.niche}.csv`; a.click(); URL.revokeObjectURL(url);
       toast.success('CSV downloaded');
-    } else {
-      toast.error('No exportable data');
-    }
-  };
-
-  const handleShare = async () => {
-    if (navigator.share) {
-      await navigator.share({ title: `MusePRO Report: ${report?.niche}`, url: window.location.href }).catch(() => {});
-    } else {
-      await navigator.clipboard.writeText(window.location.href);
-      toast.success('Link copied');
-    }
+    } else toast.error('No exportable data');
   };
 
   if (loading) return <main className="min-h-screen bg-[#0A0A0A] flex items-center justify-center"><Loader2 size={32} className="animate-spin text-indigo-400" /></main>;
-  if (error || !report) return <main className="min-h-screen bg-[#0A0A0A] flex items-center justify-center text-red-400"><div className="text-center"><p className="text-xl mb-4">Report not found</p><Link href="/history" className="text-indigo-400">← Back to History</Link></div></main>;
+  if (error || !report) return <main className="min-h-screen bg-[#0A0A0A] flex items-center justify-center text-red-400"><div className="text-center"><p className="text-xl mb-4">Report not found</p><Link href="/history" className="text-indigo-400">← Back</Link></div></main>;
 
   const isProduct = report.type === 'product';
   const data = report.data || {};
-  const financials = data.financial_forecast || data.financial_projections || {};
-  const realProducts = data.realProducts || [];
   const keywords = data.keywords || [];
+  const realProducts = data.realProducts || [];
   const serpResults = data.serpResults || data.serp || [];
 
   // Chart data
-  const demandTrend = data.chart_data?.demand_forecast_12m?.map((v: number, i: number) => ({ month: `M${i+1}`, value: v })) || [];
-  const marketShare = data.chart_data?.competitor_market_share || [];
   const trendLine = data.chart_data?.trend_12m?.map((v: number, i: number) => ({ month: `M${i+1}`, value: v })) || [];
   const trafficForecast = data.chart_data?.traffic_forecast_6m?.map((v: number, i: number) => ({ month: `M${i+1}`, traffic: v })) || data.chart_data?.traffic_growth_6m?.map((v: number, i: number) => ({ month: `M${i+1}`, traffic: v })) || [];
+  const marketShare = data.chart_data?.competitor_market_share || [];
 
-  const getScore = () => {
-    if (isProduct) return data.market_score || data.opportunity_score || data.score || 0;
-    if (data.trend_score === 'Evergreen') return 70;
-    if (data.trend_score === 'Seasonal') return 50;
-    return trafficForecast.length ? Math.min(Math.round(trafficForecast[trafficForecast.length-1]?.traffic / 1000), 100) : 0;
-  };
-  const score = getScore();
+  const score = isProduct ? (data.market_score || data.opportunity_score || data.score || 0) : (data.trend_score === 'Evergreen' ? 70 : data.trend_score === 'Seasonal' ? 50 : trafficForecast.length ? Math.min(Math.round(trafficForecast[trafficForecast.length-1]?.traffic / 1000), 100) : 0);
 
   const getProfitOrTraffic = () => {
-    if (isProduct) return financials.month6_profit_optimistic || financials.month6_profit_conservative || 0;
+    if (isProduct) return data.financial_forecast?.month6_profit_optimistic || data.financial_forecast?.month6_profit_conservative || 0;
     return trafficForecast.length ? trafficForecast[trafficForecast.length-1]?.traffic || 0 : 0;
   };
 
+  const SectionCopyButton = ({ label, text }: { label: string; text: string }) => (
+    <button
+      onClick={() => copyText(text, label)}
+      className="ml-2 p-1 rounded hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
+      title={`Copy ${label}`}
+    >
+      {copied === label ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+    </button>
+  );
+
   return (
     <main className="min-h-screen bg-[#0A0A0A] text-white font-['Inter']">
+      {/* Navbar */}
       <nav className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-neutral-800">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -142,43 +123,62 @@ export default function UnifiedReportPage() {
           <span className={`text-xs px-2 py-0.5 rounded-full ${isProduct ? 'bg-emerald-500/10 text-emerald-400' : 'bg-indigo-500/10 text-indigo-400'}`}>{isProduct ? 'Product' : 'SEO'}</span>
         </div>
         <div className="flex gap-2">
-          <button onClick={handleCopyAll} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm">{copied ? <Check size={14} /> : <Copy size={14} />}{copied ? 'Copied' : 'Copy'}</button>
           <button onClick={handleExportPDF} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm"><FileDown size={14} />PDF</button>
           <button onClick={handleExportCSV} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm"><Download size={14} />CSV</button>
-          <button onClick={handleShare} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm"><Share2 size={14} />Share</button>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-6 pb-10">
         {/* KPI Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="p-4 rounded-xl bg-[#171717] border border-neutral-800">
-            <p className="text-xs text-neutral-400 mb-1">{isProduct ? 'OPPORTUNITY SCORE' : 'TREND'}</p>
-            <p className="text-2xl font-bold font-mono">{isProduct ? `${score}/100` : (data.trend_assessment || data.trend_score || 'N/A')}</p>
+          <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-neutral-400">{isProduct ? 'OPPORTUNITY SCORE' : 'TREND'}</p>
+              <SectionCopyButton label={isProduct ? 'Opportunity Score' : 'Trend'} text={isProduct ? `${score}/100` : (data.trend_assessment || data.trend_score || 'N/A')} />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold font-mono">{isProduct ? `${score}/100` : (data.trend_assessment || data.trend_score || 'N/A')}</span>
+            </div>
+            {isProduct && <div className="mt-2 w-full h-1.5 rounded-full bg-neutral-800"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${score}%` }} /></div>}
           </div>
           {isProduct ? (
             <>
-              <div className="p-4 rounded-xl bg-[#171717] border border-neutral-800">
-                <p className="text-xs text-neutral-400 mb-1">EST. MONTHLY PROFIT</p>
+              <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-neutral-400">EST. MONTHLY PROFIT</p>
+                  <SectionCopyButton label="Est. Monthly Profit" text={`$${getProfitOrTraffic().toLocaleString()}`} />
+                </div>
                 <p className="text-2xl font-bold font-mono">${getProfitOrTraffic().toLocaleString()}</p>
               </div>
-              <div className="p-4 rounded-xl bg-[#171717] border border-neutral-800">
-                <p className="text-xs text-neutral-400 mb-1">BREAKEVEN</p>
-                <p className="text-2xl font-bold font-mono">{financials.units_to_breakeven?.toLocaleString() || 'N/A'} units</p>
+              <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-neutral-400">BREAKEVEN</p>
+                  <SectionCopyButton label="Breakeven" text={`${data.financial_forecast?.units_to_breakeven || 'N/A'} units`} />
+                </div>
+                <p className="text-2xl font-bold font-mono">{data.financial_forecast?.units_to_breakeven?.toLocaleString() || 'N/A'} units</p>
               </div>
-              <div className="p-4 rounded-xl bg-[#171717] border border-neutral-800">
-                <p className="text-xs text-neutral-400 mb-1">TIME TO PROFIT</p>
-                <p className="text-2xl font-bold font-mono">{financials.months_to_profitability || 'N/A'} months</p>
+              <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-neutral-400">TIME TO PROFIT</p>
+                  <SectionCopyButton label="Time to Profit" text={`${data.financial_forecast?.months_to_profitability || 'N/A'} months`} />
+                </div>
+                <p className="text-2xl font-bold font-mono">{data.financial_forecast?.months_to_profitability || 'N/A'} months</p>
               </div>
             </>
           ) : (
             <>
-              <div className="p-4 rounded-xl bg-[#171717] border border-neutral-800">
-                <p className="text-xs text-neutral-400 mb-1">KEYWORDS ANALYZED</p>
+              <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-neutral-400">KEYWORDS ANALYZED</p>
+                  <SectionCopyButton label="Keywords Analyzed" text={keywords.length.toString()} />
+                </div>
                 <p className="text-2xl font-bold font-mono">{keywords.length}</p>
               </div>
-              <div className="p-4 rounded-xl bg-[#171717] border border-neutral-800">
-                <p className="text-xs text-neutral-400 mb-1">6-MONTH TRAFFIC ESTIMATE</p>
+              <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-neutral-400">6-MONTH TRAFFIC EST.</p>
+                  <SectionCopyButton label="Traffic Estimate" text={`${trafficForecast.length ? trafficForecast[trafficForecast.length-1]?.traffic.toLocaleString() : 'N/A'} visits`} />
+                </div>
                 <p className="text-2xl font-bold font-mono">{trafficForecast.length ? trafficForecast[trafficForecast.length-1]?.traffic.toLocaleString() : 'N/A'}</p>
               </div>
             </>
@@ -187,11 +187,11 @@ export default function UnifiedReportPage() {
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {demandTrend.length > 0 && (
-            <div className="p-4 rounded-xl bg-[#171717] border border-neutral-800">
-              <h3 className="text-sm font-semibold mb-3">DEMAND TREND (12 MONTHS)</h3>
+          {trendLine.length > 0 && (
+            <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800">
+              <h3 className="text-sm font-semibold mb-3">SEARCH TREND (12 MONTHS)</h3>
               <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={demandTrend}>
+                <LineChart data={trendLine}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
                   <XAxis dataKey="month" stroke="#A3A3A3" fontSize={12} />
                   <YAxis stroke="#A3A3A3" fontSize={12} />
@@ -201,23 +201,23 @@ export default function UnifiedReportPage() {
               </ResponsiveContainer>
             </div>
           )}
-          {trendLine.length > 0 && (
-            <div className="p-4 rounded-xl bg-[#171717] border border-neutral-800">
-              <h3 className="text-sm font-semibold mb-3">SEARCH TREND (12 MONTHS)</h3>
+          {trafficForecast.length > 0 && (
+            <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800">
+              <h3 className="text-sm font-semibold mb-3">TRAFFIC FORECAST (6 MONTHS)</h3>
               <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={trendLine}>
+                <AreaChart data={trafficForecast}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
                   <XAxis dataKey="month" stroke="#A3A3A3" fontSize={12} />
                   <YAxis stroke="#A3A3A3" fontSize={12} />
                   <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #262626', borderRadius: '8px' }} />
-                  <Line type="monotone" dataKey="value" stroke="#8B5CF6" strokeWidth={2} dot={{ r: 3, fill: '#8B5CF6' }} />
-                </LineChart>
+                  <Area type="monotone" dataKey="traffic" stroke="#06B6D4" fill="#06B6D430" />
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           )}
           {marketShare.length > 0 && (
-            <div className="p-4 rounded-xl bg-[#171717] border border-neutral-800">
-              <h3 className="text-sm font-semibold mb-3">MARKET SHARE DISTRIBUTION</h3>
+            <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800">
+              <h3 className="text-sm font-semibold mb-3">MARKET SHARE</h3>
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
                   <Pie data={marketShare} dataKey="share" nameKey="name" cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={3}>
@@ -233,26 +233,15 @@ export default function UnifiedReportPage() {
               </div>
             </div>
           )}
-          {trafficForecast.length > 0 && (
-            <div className="p-4 rounded-xl bg-[#171717] border border-neutral-800">
-              <h3 className="text-sm font-semibold mb-3">TRAFFIC FORECAST (6 MONTHS)</h3>
-              <ResponsiveContainer width="100%" height={220}>
-                <AreaChart data={trafficForecast}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
-                  <XAxis dataKey="month" stroke="#A3A3A3" fontSize={12} />
-                  <YAxis stroke="#A3A3A3" fontSize={12} />
-                  <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #262626', borderRadius: '8px' }} />
-                  <Area type="monotone" dataKey="traffic" stroke="#06B6D4" fill="#06B6D430" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          )}
         </div>
 
-        {/* Real Data Tables */}
+        {/* Data Tables with Copy */}
         {isProduct && realProducts.length > 0 && (
-          <div className="p-4 rounded-xl bg-[#171717] border border-neutral-800 mb-8">
-            <h3 className="text-sm font-semibold mb-3">PRODUCTS WORTH SELLING</h3>
+          <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800 mb-8">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold">PRODUCTS WORTH SELLING</h3>
+              <SectionCopyButton label="Products Table" text={realProducts.map((p: any) => `${p.title} | $${p.price} | ${p.reviews} reviews | ${p.source}`).join('\n')} />
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
                 <thead><tr className="border-b border-neutral-700 text-neutral-400"><th className="text-left py-2 px-3">#</th><th className="text-left py-2 px-3">Product</th><th className="text-left py-2 px-3">Price</th><th className="text-left py-2 px-3">Reviews</th><th className="text-left py-2 px-3">Source</th></tr></thead>
@@ -263,12 +252,15 @@ export default function UnifiedReportPage() {
         )}
 
         {!isProduct && keywords.length > 0 && (
-          <div className="p-4 rounded-xl bg-[#171717] border border-neutral-800 mb-8">
-            <h3 className="text-sm font-semibold mb-3">KEYWORDS WORTH TARGETING</h3>
+          <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800 mb-8">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold">KEYWORDS WORTH TARGETING</h3>
+              <SectionCopyButton label="Keywords Table" text={keywords.map((k: any) => `${k.keyword} | Volume: ${k.volume ?? 'N/A'} | CPC: ${k.cpc ?? 'N/A'} | KD: ${k.kd ?? 'N/A'}`).join('\n')} />
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
                 <thead><tr className="border-b border-neutral-700 text-neutral-400"><th className="text-left py-2 px-3">#</th><th className="text-left py-2 px-3">Keyword</th><th className="text-left py-2 px-3">Volume</th><th className="text-left py-2 px-3">CPC</th><th className="text-left py-2 px-3">KD</th></tr></thead>
-                <tbody>{keywords.slice(0,50).map((k: any, i: number) => <tr key={i} className="border-b border-neutral-800"><td className="py-2 px-3">{i+1}</td><td className="py-2 px-3">{k.keyword}</td><td className="py-2 px-3">{k.volume.toLocaleString()}</td><td className="py-2 px-3">${k.cpc.toFixed(2)}</td><td className="py-2 px-3">{k.kd}</td></tr>)}</tbody>
+                <tbody>{keywords.slice(0,50).map((k: any, i: number) => <tr key={i} className="border-b border-neutral-800"><td className="py-2 px-3">{i+1}</td><td className="py-2 px-3">{k.keyword}</td><td className="py-2 px-3">{k.volume?.toLocaleString() ?? 'N/A'}</td><td className="py-2 px-3">{k.cpc ? `$${k.cpc.toFixed(2)}` : 'N/A'}</td><td className="py-2 px-3">{k.kd ?? 'N/A'}</td></tr>)}</tbody>
               </table>
             </div>
           </div>
