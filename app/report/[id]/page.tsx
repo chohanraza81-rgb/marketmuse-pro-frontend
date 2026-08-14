@@ -12,7 +12,8 @@ import {
   Download,
   TrendingUp,
   Search,
-  Loader2,   // ✅ Loader2 import added
+  Loader2,
+  Share2,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
@@ -55,6 +56,7 @@ export default function UnifiedReportPage() {
   }, [id]);
 
   const copyText = async (text: string, label: string) => {
+    if (!text) return;
     await navigator.clipboard.writeText(text);
     setCopied(label);
     toast.success(`${label} copied`);
@@ -112,7 +114,7 @@ export default function UnifiedReportPage() {
 
   const handleShare = async () => {
     if (navigator.share) {
-      await navigator.share({ title: `MusePRO Report: ${report.niche}`, url: window.location.href }).catch(() => {});
+      await navigator.share({ title: `MusePRO Report: ${report?.niche}`, url: window.location.href }).catch(() => {});
     } else {
       await navigator.clipboard.writeText(window.location.href);
       toast.success('Link copied');
@@ -169,6 +171,7 @@ export default function UnifiedReportPage() {
 
   return (
     <main className="min-h-screen bg-[#0A0A0A] text-white font-['Inter']">
+      {/* Navbar */}
       <nav className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-neutral-800">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -188,23 +191,32 @@ export default function UnifiedReportPage() {
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-6 py-4 flex flex-wrap justify-between items-center gap-3">
+      {/* Top Action Bar */}
+      <div className="max-w-7xl mx-auto px-6 py-5 flex flex-wrap justify-between items-center gap-3 border-b border-neutral-800/50">
         <div className="flex items-center gap-3">
           <Link href="/history" className="text-neutral-400 hover:text-white"><ArrowLeft size={18} /></Link>
           {isProduct ? <TrendingUp size={16} className="text-emerald-400" /> : <Search size={16} className="text-indigo-400" />}
-          <span className="font-medium capitalize">{report.niche}</span>
+          <span className="font-semibold capitalize">{report.niche}</span>
           <span className={`text-xs px-2 py-0.5 rounded-full ${isProduct ? 'bg-emerald-500/10 text-emerald-400' : 'bg-indigo-500/10 text-indigo-400'}`}>{isProduct ? 'Product' : 'SEO'}</span>
         </div>
-        <div className="flex gap-2">
-          <button onClick={handleExportPDF} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm"><FileDown size={14} />PDF</button>
-          <button onClick={handleExportCSV} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm"><Download size={14} />CSV</button>
-          <button onClick={handleShare} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm"><Check size={14} />Share</button>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => copyText(report.markdown, 'Complete Report')}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
+          >
+            {copied === 'Complete Report' ? <Check size={16} /> : <Copy size={16} />}
+            {copied === 'Complete Report' ? 'Copied' : 'Copy Complete Report'}
+          </button>
+          <button onClick={handleExportPDF} className="flex items-center gap-1 px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm"><FileDown size={14} />PDF</button>
+          <button onClick={handleExportCSV} className="flex items-center gap-1 px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm"><Download size={14} />CSV</button>
+          <button onClick={handleShare} className="flex items-center gap-1 px-3 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm"><Share2 size={14} />Share</button>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 pb-10">
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 pb-20">
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-8">
           <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs text-neutral-400">{isProduct ? 'OPPORTUNITY SCORE' : 'TREND'}</p>
@@ -338,8 +350,18 @@ export default function UnifiedReportPage() {
           </div>
         )}
 
-        {/* Markdown Report */}
-        <div className="max-w-4xl mx-auto px-6 pb-20">
+        {/* Complete Markdown Report */}
+        <div className="max-w-4xl mx-auto px-6 pb-20 mt-12">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">Complete Report</h2>
+            <button
+              onClick={() => copyText(report.markdown, 'Complete Report')}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
+            >
+              {copied === 'Complete Report' ? <Check size={16} /> : <Copy size={16} />}
+              {copied === 'Complete Report' ? 'Copied' : 'Copy Complete Report'}
+            </button>
+          </div>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-3xl p-8 md:p-12">
             <article className="prose prose-invert max-w-none prose-headings:text-white prose-p:text-neutral-300 prose-strong:text-white prose-a:text-indigo-400">
               <ReactMarkdown>{report.markdown}</ReactMarkdown>
