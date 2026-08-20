@@ -26,7 +26,7 @@ const flags: Record<string, string> = {
   sa: '🇸🇦', ae: '🇦🇪', pk: '🇵🇰', in: '🇮🇳', tr: '🇹🇷', my: '🇲🇾',
 };
 
-const BACKEND_URL = 'https://marketmuse-pro-backend-production-a93c.up.railway.app/api';
+const BACKEND_URL = 'https://marketmuse-pro-backend-production.up.railway.app/api';
 const PER_PAGE = 20;
 
 type SortKey = 'date' | 'niche' | 'type';
