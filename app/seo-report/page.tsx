@@ -1,60 +1,150 @@
 'use client';
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { Sparkles, ChevronRight, ArrowLeft, Search, TrendingUp, Loader2 } from 'lucide-react';
+import Link from 'next/link';
+import LiveStatus from '@/components/LiveStatus';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production.up.railway.app/api';
+const countries = [
+  { code: 'us', name: 'United States', flag: '🇺🇸' },
+  { code: 'gb', name: 'United Kingdom', flag: '🇬🇧' },
+  { code: 'ca', name: 'Canada', flag: '🇨🇦' },
+  { code: 'au', name: 'Australia', flag: '🇦🇺' },
+  { code: 'de', name: 'Germany', flag: '🇩🇪' },
+  { code: 'sg', name: 'Singapore', flag: '🇸🇬' },
+  { code: 'sa', name: 'Saudi Arabia', flag: '🇸🇦' },
+  { code: 'ae', name: 'UAE', flag: '🇦🇪' },
+  { code: 'pk', name: 'Pakistan', flag: '🇵🇰' },
+  { code: 'in', name: 'India', flag: '🇮🇳' },
+  { code: 'tr', name: 'Turkey', flag: '🇹🇷' },
+  { code: 'my', name: 'Malaysia', flag: '🇲🇾' },
+];
 
 export default function SEOReportPage() {
-  const router = useRouter();
   const [niche, setNiche] = useState('');
   const [country, setCountry] = useState('us');
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
-  const handleGenerate = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!niche.trim()) return toast.error('Please enter a niche');
+    if (!niche.trim()) return;
     setLoading(true);
+
     try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production.up.railway.app/api';
       const res = await fetch(`${API_URL}/seo-report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ niche: niche.trim(), country }),
       });
-      if (!res.ok) throw new Error('Failed to generate report');
-      const data = await res.json();
-      router.push(`/report/${data._id}`);
-      toast.success('Report generated successfully!');
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || 'Failed to generate report');
+      }
+
+      const report = await res.json();
+      toast.success('SEO report generated successfully', { icon: '✅' });
+      setTimeout(() => router.push(`/report/${report._id}`), 500);
     } catch (err: any) {
-      toast.error(err.message || 'Generation failed');
+      toast.error(err.message || 'Generation failed', { icon: '❌' });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="min-h-screen bg-[#0A0A0A] text-white flex items-center justify-center p-6">
-      <div className="w-full max-w-md p-8 rounded-2xl bg-[#0F0F14] border border-neutral-800">
-        <h1 className="text-2xl font-bold mb-6 text-center">SEO Intelligence Report</h1>
-        <form onSubmit={handleGenerate} className="space-y-4">
-          <div>
-            <label className="block text-sm text-neutral-400 mb-1">Niche / Topic</label>
-            <input type="text" value={niche} onChange={(e) => setNiche(e.target.value)} className="w-full p-3 rounded-lg bg-[#0A0A0A] border border-neutral-700 focus:border-indigo-500 outline-none text-white" placeholder="e.g. keto diet for beginners" disabled={loading} />
+    <main className="min-h-screen bg-[#0A0A0A] text-white font-['Inter']">
+      {/* Navbar - Unified with Product Page */}
+      <nav className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-neutral-800/50">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                <Sparkles size={16} className="text-white" />
+              </div>
+              <span className="font-bold text-lg">Muse<span className="text-indigo-400">PRO</span></span>
+            </Link>
+            <LiveStatus />
           </div>
-          <div>
-            <label className="block text-sm text-neutral-400 mb-1">Country</label>
-            <select value={country} onChange={(e) => setCountry(e.target.value)} className="w-full p-3 rounded-lg bg-[#0A0A0A] border border-neutral-700 focus:border-indigo-500 outline-none text-white" disabled={loading}>
-              <option value="us">United States</option>
-              <option value="ca">Canada</option>
-              <option value="au">Australia</option>
-              <option value="de">Germany</option>
-              <option value="sg">Singapore</option>
-              <option value="in">India</option>
-              <option value="pk">Pakistan</option>
-            </select>
+          <div className="flex items-center gap-3">
+            <Link href="/history" className="text-sm text-neutral-400 hover:text-white">History</Link>
+            <Link href="/seo-report" className="text-sm px-4 py-2 rounded-full bg-indigo-600 hover:bg-indigo-500 border border-indigo-600 text-white">SEO</Link>
+            <Link href="/product-research" className="text-sm px-4 py-2 rounded-full bg-neutral-800 hover:bg-neutral-700 border border-neutral-700">Product</Link>
           </div>
-          <button type="submit" disabled={loading} className="w-full py-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-semibold transition-colors disabled:opacity-50">
-            {loading ? 'Generating...' : 'Generate SEO Report'}
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <div className="max-w-2xl mx-auto px-6 py-16">
+        <Link href="/" className="inline-flex items-center gap-2 text-neutral-400 hover:text-white text-sm mb-6 transition-colors">
+          <ArrowLeft size={16} /> Back
+        </Link>
+
+        <div className="flex items-center gap-3 mb-2">
+          <Search size={24} className="text-indigo-400" />
+          <h1 className="text-2xl font-bold">SEO Intelligence Report</h1>
+        </div>
+        <p className="text-neutral-400 text-sm mb-8">
+          Real-time keyword research, SERP analysis, and content strategy for your next organic growth campaign.
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Niche Input */}
+          <div className="p-6 rounded-2xl bg-[#0F0F14] border border-neutral-800/50">
+            <label className="block text-sm font-medium mb-2">Niche / Topic</label>
+            <input
+              type="text"
+              value={niche}
+              onChange={(e) => setNiche(e.target.value)}
+              placeholder="e.g. keto diet for beginners"
+              className="w-full p-4 rounded-xl bg-[#0A0A0A] border border-neutral-700 focus:border-indigo-500 outline-none text-white transition-colors placeholder:text-neutral-500"
+              disabled={loading}
+            />
+          </div>
+
+          {/* Country Selection - 12 Countries Grid */}
+          <div className="p-6 rounded-2xl bg-[#0F0F14] border border-neutral-800/50">
+            <label className="block text-sm font-medium mb-3">Target Country</label>
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {countries.map((c) => (
+                <button
+                  key={c.code}
+                  type="button"
+                  onClick={() => setCountry(c.code)}
+                  className={`flex flex-col items-center justify-center gap-1 p-3 rounded-xl border transition-all ${
+                    country === c.code
+                      ? 'border-indigo-500 bg-indigo-500/10 text-white'
+                      : 'border-neutral-800 bg-[#0A0A0A] hover:bg-neutral-800 text-neutral-400'
+                  }`}
+                  disabled={loading}
+                >
+                  <span className="text-xl">{c.flag}</span>
+                  <span className="text-[10px] font-medium uppercase">{c.code}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Generate Button */}
+          <button
+            type="submit"
+            disabled={loading || !niche.trim()}
+            className="w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-lg transition-all flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <Loader2 size={20} className="animate-spin" />
+                Generating SEO Report...
+              </>
+            ) : (
+              <>
+                Generate SEO Report <ChevronRight size={20} />
+              </>
+            )}
           </button>
         </form>
       </div>
