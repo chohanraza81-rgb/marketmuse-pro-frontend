@@ -74,7 +74,6 @@ export default function UnifiedReportPage() {
   // Helper: Extract specific section from Markdown by title
   const extractSection = (markdown: string, title: string): string => {
     if (!markdown) return 'Section not found';
-    // Regex to find title and capture text until the next numbered section or end of string
     const safeTitle = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(`(${safeTitle})([\\s\\S]*?)(?=(\\n\\d+\\.\\s+[A-Z ]+|\\Z))`, 'i');
     const match = markdown.match(regex);
@@ -102,7 +101,6 @@ export default function UnifiedReportPage() {
     setTimeout(() => w.print(), 500);
   };
 
-  // New: Export as .txt file
   const handleExportTxt = () => {
     if (!report) return;
     const blob = new Blob([report.markdown], { type: 'text/plain' });
@@ -189,12 +187,13 @@ export default function UnifiedReportPage() {
   const trendSummary = report.trendSummary || report.trend_summary || 'Evergreen trend';
   const chartData = report.chartData || {};
   const trendLine = chartData.trend_12m || [];
+  // ✅ CRITICAL FIX: trafficForecast variable is properly defined here
   const trafficForecast = chartData.traffic_forecast_6m || [];
   const marketShare = chartData.market_share || [];
 
   const score = isProduct
     ? (data.market_score || data.opportunity_score || 70)
-    : (trendForecast.length ? Math.min(Math.round(trafficForecast[trafficForecast.length - 1]?.traffic / 1000), 100) : 65);
+    : (trafficForecast.length ? Math.min(Math.round(trafficForecast[trafficForecast.length - 1]?.traffic / 1000), 100) : 65);
 
   return (
     <main className="min-h-screen bg-[#0A0A0A] text-white font-['Inter']">
@@ -389,7 +388,7 @@ export default function UnifiedReportPage() {
               <div className="flex flex-wrap justify-center gap-3 mt-2">
                 {marketShare.map((entry: any, idx: number) => (
                   <div key={idx} className="flex items-center gap-1 text-xs text-neutral-400">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS[idx % COLORS.length] }} />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS[idx % COLORS.length]} } />
                     {entry.name}: {entry.share}%
                   </div>
                 ))}
