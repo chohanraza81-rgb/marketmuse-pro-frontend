@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { toast } from 'sonner';
-import { Loader2, Trash2, Download, Edit, Eye, Search, TrendingUp, FileText, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Loader2, Trash2, Download, Edit, Eye, Search, TrendingUp, FileText, RefreshCw, AlertTriangle, Home, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production.up.railway.app/api';
@@ -14,6 +15,8 @@ const countryFlags: Record<string, string> = {
 };
 
 export default function HistoryPage() {
+  const pathname = usePathname();
+
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,7 +54,6 @@ export default function HistoryPage() {
       const res = await fetch(`${API_URL}/reports/${id}`);
       if (!res.ok) throw new Error('Report not found');
       const data = await res.json();
-
       const blob = new Blob([data.markdown], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -97,7 +99,6 @@ export default function HistoryPage() {
     }
   };
 
-  // 🛡️ Advanced Delete Flow
   const openDeleteModal = (report: any) => {
     setDeleteModalReport(report);
   };
@@ -136,14 +137,40 @@ export default function HistoryPage() {
   if (loading) return <main className="min-h-screen bg-[#0A0A0A] flex items-center justify-center"><Loader2 size={32} className="animate-spin text-indigo-400" /></main>;
 
   return (
-    <main className="min-h-screen bg-[#0A0A0A] text-white p-6 font-['Inter'] relative overflow-hidden">
+    <main className="min-h-screen bg-[#0A0A0A] text-white font-['Inter'] relative overflow-hidden">
       {/* Premium Background Glow */}
       <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-br from-indigo-600/20 to-purple-600/10 blur-3xl pointer-events-none" />
       
-      <div className="max-w-7xl mx-auto relative z-10">
+      {/* 🧭 GLOBAL NAVBAR */}
+      <nav className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-neutral-800/50">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+              <Sparkles size={16} className="text-white" />
+            </div>
+            <span className="font-bold text-lg">Muse<span className="text-indigo-400">PRO</span></span>
+          </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/" className={`text-sm px-4 py-2 rounded-full transition-all ${pathname === '/' ? 'bg-indigo-600 text-white' : 'bg-neutral-800 hover:bg-neutral-700 border border-neutral-700'}`}>
+              Home
+            </Link>
+            <Link href="/seo-report" className={`text-sm px-4 py-2 rounded-full transition-all ${pathname === '/seo-report' ? 'bg-indigo-600 text-white' : 'bg-neutral-800 hover:bg-neutral-700 border border-neutral-700'}`}>
+              SEO Report
+            </Link>
+            <Link href="/product-research" className={`text-sm px-4 py-2 rounded-full transition-all ${pathname === '/product-research' ? 'bg-indigo-600 text-white' : 'bg-neutral-800 hover:bg-neutral-700 border border-neutral-700'}`}>
+              Product Report
+            </Link>
+            <Link href="/history" className={`text-sm px-4 py-2 rounded-full transition-all ${pathname === '/history' ? 'bg-indigo-600 text-white' : 'bg-neutral-800 hover:bg-neutral-700 border border-neutral-700'}`}>
+              History
+            </Link>
+          </div>
+        </div>
+      </nav>
+
+      <div className="max-w-7xl mx-auto px-6 py-8 relative z-10">
         
         {/* Header */}
-        <div className="flex justify-between items-center mb-8 mt-4">
+        <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-neutral-400 bg-clip-text text-transparent">Report History</h1>
             <p className="text-neutral-400 mt-1 text-sm">Agency-level intelligence. Track, edit, and export your campaigns.</p>
@@ -214,7 +241,6 @@ export default function HistoryPage() {
                     <p className="text-xs text-neutral-500 mt-1 uppercase tracking-wider">
                       {r.type === 'seo' ? 'SEO' : 'Product'} 
                       <span className="mx-2 text-neutral-700">•</span> 
-                      {/* 🚩 Flag added here */}
                       <span className="text-base align-middle">{countryFlags[r.country] || '🌍'}</span> 
                       <span className="ml-1">{r.country.toUpperCase()}</span>
                     </p>
@@ -225,7 +251,6 @@ export default function HistoryPage() {
                   <Link href={`/report/${r._id}`} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition-all"><Eye size={18} /></Link>
                   <button onClick={() => handleEdit(r)} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition-all"><Edit size={18} /></button>
                   <button onClick={(e) => handleDownload(e, r._id, r.niche)} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition-all"><Download size={18} /></button>
-                  {/* 🛡️ Advanced Delete Trigger */}
                   <button onClick={() => openDeleteModal(r)} className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-all"><Trash2 size={18} /></button>
                 </div>
               </motion.div>
@@ -260,27 +285,22 @@ export default function HistoryPage() {
       )}
       </AnimatePresence>
 
-      {/* 🛡️ ADVANCED DELETE MODAL */}
+      {/* Advanced Delete Modal */}
       <AnimatePresence>
       {deleteModalReport && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[60] p-4">
           <motion.div initial={{ scale: 0.9, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9 }} className="w-full max-w-md rounded-3xl bg-gradient-to-br from-[#1a1a24] to-[#0F0F14] border border-red-500/20 p-8 shadow-2xl shadow-red-500/10 text-center">
-            
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.1 }} className="mx-auto w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mb-6">
               <AlertTriangle size={40} className="text-red-500" />
             </motion.div>
-            
             <h2 className="text-2xl font-bold text-white mb-2">Delete Report?</h2>
             <p className="text-neutral-400 mb-8">
               Are you sure you want to permanently delete <br />
               <span className="font-bold text-white capitalize">"{deleteModalReport.niche}"</span>? 
               <br />This action cannot be undone.
             </p>
-            
             <div className="flex gap-3 justify-center">
-              <button onClick={() => setDeleteModalReport(null)} disabled={isDeleting} className="px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-medium transition-all">
-                Cancel
-              </button>
+              <button onClick={() => setDeleteModalReport(null)} disabled={isDeleting} className="px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-medium transition-all">Cancel</button>
               <button 
                 onClick={confirmDelete} 
                 disabled={isDeleting}
