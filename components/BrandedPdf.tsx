@@ -1,8 +1,5 @@
 'use client';
 import html2pdf from 'html2pdf.js';
-import ReactMarkdown from 'react-markdown';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production.up.railway.app/api';
 
 export const generateBrandedPDF = async (report: any, settings: any) => {
   const isLight = settings.pdfTheme === 'light';
@@ -10,9 +7,7 @@ export const generateBrandedPDF = async (report: any, settings: any) => {
   const textColor = isLight ? '#111111' : '#FFFFFF';
   const subText = isLight ? '#666666' : '#AAAAAA';
   const primary = settings.primaryColor;
-  const secondary = settings.secondaryColor;
 
-  // Advanced HTML Template (Cover, TOC, Content)
   const htmlContent = `
   <div id="pdf-content" style="font-family: ${settings.fontFamily}; background: ${bgColor}; color: ${textColor}; padding: 40px;">
     <!-- Cover Page -->
@@ -30,23 +25,24 @@ export const generateBrandedPDF = async (report: any, settings: any) => {
     <!-- TOC -->
     <div style="page-break-before: always; margin-bottom: 40px;">
       <h2 style="border-bottom: 2px solid ${primary}; padding-bottom: 10px; color: ${primary};">Table of Contents</h2>
-      ${Array.from(new Set((report.markdown || '').match(/(^|\n)(\d+\.\s+[A-Z ]+)/g) || []))
-        // ✅ FIX: Explicitly type `section` as string
-        .map((section: string) => `
-        <p style="color: ${textColor}; margin-bottom: 8px;">${section.replace(/\n/g, '')}</p>
-      `).join('')}
+      ${
+        // ✅ FINAL FIX: Cast the array to string[] to satisfy TypeScript
+        (Array.from(new Set((report.markdown || '').match(/(^|\n)(\d+\.\s+[A-Z ]+)/g) || [])) as string[])
+          .map((section) => `
+            <p style="color: ${textColor}; margin-bottom: 8px;">${section.replace(/\n/g, '')}</p>
+          `).join('')
+      }
     </div>
 
     <!-- Content -->
     <div style="page-break-before: always; line-height: 1.6;">
       <article style="font-size: 16px;">
-        ${renderMarkdown(report.markdown, primary, textColor, subText)}
+        ${report.markdown.replace(/\n/gm, '<br />')}
       </article>
     </div>
   </div>
   `;
 
-  // PDF Options
   const opt = {
     margin: [0, 0, 0, 0],
     filename: `${settings.agencyName.replace(/\s/g, '_')}_${report.niche}.pdf`,
@@ -56,19 +52,4 @@ export const generateBrandedPDF = async (report: any, settings: any) => {
   };
 
   html2pdf().set(opt).from(htmlContent).save();
-};
-
-// Helper to parse Markdown to styled HTML
-const renderMarkdown = (md: string, primary: string, text: string, subText: string) => {
-  if (!md) return '';
-  let html = md
-    .replace(/^### (.*$)/gim, '<h3 style="color: ' + primary + '; margin-top: 20px;">$1</h3>')
-    .replace(/^## (.*$)/gim, '<h2 style="color: ' + primary + '; margin-top: 30px;">$1</h2>')
-    .replace(/^# (.*$)/gim, '<h1 style="color: ' + primary + '; margin-top: 40px;">$1</h1>')
-    .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
-    .replace(/\[(.*?)\]\((.*?)\)/gim, '<a href="$2" style="color: ' + primary + ';">$1</a>')
-    .replace(/^\s*\n\*\s(.*)/gim, '<ul style="color: ' + text + ';"><li>$1</li></ul>')
-    .replace(/^\s*\n(\d+)\.\s(.*)/gim, '<ol style="color: ' + text + ';"><li>$2</li></ol>')
-    .replace(/\n/gim, '<br />');
-  return html;
 };
