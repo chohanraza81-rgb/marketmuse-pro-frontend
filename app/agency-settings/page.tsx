@@ -34,7 +34,7 @@ export default function AgencySettingsPage() {
           setFooterText(data.footerText || '');
           setSupportEmail(data.supportEmail || '');
         }
-      } catch (err) {
+      } catch {
         toast.error('Failed to load settings');
       } finally {
         setLoading(false);
@@ -54,11 +54,24 @@ export default function AgencySettingsPage() {
       if (!res.ok) throw new Error('Failed to save');
       toast.success('White-Label settings saved!');
     } catch (err) {
-      toast.error(err.message);
+      // ✅ FIXED: Type error 'err' is unknown
+      if (err instanceof Error) {
+        toast.error(err.message);
+      } else {
+        toast.error('An unexpected error occurred');
+      }
     } finally {
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full" />
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#0A0A0A] text-white p-6 font-['Inter']">
