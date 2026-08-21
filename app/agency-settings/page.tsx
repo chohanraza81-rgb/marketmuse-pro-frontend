@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
 import { Sparkles, Save, Palette, Type, Building2 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -54,7 +53,7 @@ export default function AgencySettingsPage() {
       if (!res.ok) throw new Error('Failed to save');
       toast.success('White-Label settings saved!');
     } catch (err) {
-      // ✅ 100% FIX: Narrowing 'err' type to 'Error'
+      // ✅ GUARANTEED FIX: Narrowing 'err' to 'Error'
       if (err instanceof Error) {
         toast.error(err.message);
       } else {
