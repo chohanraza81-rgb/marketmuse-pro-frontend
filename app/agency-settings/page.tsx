@@ -54,7 +54,7 @@ export default function AgencySettingsPage() {
       if (!res.ok) throw new Error('Failed to save');
       toast.success('White-Label settings saved!');
     } catch (err) {
-      // ✅ FIXED: Type error 'err' is unknown
+      // ✅ 100% FIX: Narrowing 'err' type to 'Error'
       if (err instanceof Error) {
         toast.error(err.message);
       } else {
