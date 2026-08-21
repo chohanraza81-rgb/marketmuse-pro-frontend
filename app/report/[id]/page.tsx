@@ -18,8 +18,13 @@ import {
 const COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production.up.railway.app/api';
 
-// Dynamic import for client-side PDF generation
-const html2pdf = dynamic(() => import('html2pdf.js'), { ssr: false });
+// ✅ FIX: html2pdf.js import with type cast to any
+let html2pdf: any;
+if (typeof window !== 'undefined') {
+  import('html2pdf.js').then((mod) => {
+    html2pdf = mod.default;
+  });
+}
 
 export default function UnifiedReportPage() {
   const { id } = useParams();
@@ -27,11 +32,8 @@ export default function UnifiedReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState('');
-  
-  // Agency Settings for Branded PDF
   const [agencySettings, setAgencySettings] = useState<any>(null);
 
-  // Dropdown States
   const [exportOpen, setExportOpen] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -39,22 +41,18 @@ export default function UnifiedReportPage() {
 
   useEffect(() => {
     if (!id) return;
-    
-    // Fetch Report
     fetch(`${API_URL}/reports/${id}`)
       .then(res => { if (!res.ok) throw new Error('Report not found'); return res.json(); })
       .then(data => setReport(data))
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
 
-    // Fetch Agency Settings
     fetch(`${API_URL}/agency-settings`)
       .then(res => res.json())
       .then(data => setAgencySettings(data))
       .catch(() => setAgencySettings(null));
   }, [id]);
 
-  // Close dropdowns on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (exportRef.current && !exportRef.current.contains(event.target as Node)) setExportOpen(false);
@@ -80,7 +78,6 @@ export default function UnifiedReportPage() {
     setTimeout(() => setCopied(''), 2000);
   };
 
-  // Copy Keywords Data
   const copyKeywords = () => {
     if (!report.keywords || report.keywords.length === 0) {
       toast.error('No keyword data available');
@@ -93,7 +90,6 @@ export default function UnifiedReportPage() {
     copyText(tableText, 'Keywords Data');
   };
 
-  // Standard PDF Export (Basic)
   const handleExportPDF = () => {
     if (!report) return;
     const w = window.open('', '_blank');
@@ -103,7 +99,6 @@ export default function UnifiedReportPage() {
     setTimeout(() => w.print(), 500);
   };
 
-  // Branded PDF Export (Advanced)
   const handleBrandedPDF = async () => {
     if (!report) return;
     const settings = agencySettings || {
@@ -150,9 +145,15 @@ export default function UnifiedReportPage() {
 
     toast.loading('Generating Branded PDF...');
     try {
-      await html2pdf().set(opt).from(htmlContent).save();
-      toast.dismiss();
-      toast.success('Branded PDF downloaded successfully!');
+      // ✅ FIX: calling html2pdf function after dynamic import
+      if (html2pdf) {
+        await html2pdf().set(opt).from(htmlContent).save();
+        toast.dismiss();
+        toast.success('Branded PDF downloaded successfully!');
+      } else {
+        toast.dismiss();
+        toast.error('PDF library not loaded yet, try again.');
+      }
     } catch (err) {
       toast.dismiss();
       toast.error('Failed to generate Branded PDF');
