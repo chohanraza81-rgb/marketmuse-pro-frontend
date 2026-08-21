@@ -88,6 +88,19 @@ export default function UnifiedReportPage() {
     setTimeout(() => setCopied(''), 2000);
   };
 
+  // ✅ NEW: Copy only Keywords Data in a clean Markdown Table format for clients
+  const copyKeywords = () => {
+    if (!report.keywords || report.keywords.length === 0) {
+      toast.error('No keyword data available');
+      return;
+    }
+    let tableText = `| # | Keyword | Volume | CPC | KD |\n|---|---|---|---|---|\n`;
+    report.keywords.slice(0, 50).forEach((k: any, i: number) => {
+      tableText += `| ${i+1} | ${k.keyword} | ${k.volume?.toLocaleString() ?? 'N/A'} | ${k.cpc ? '$' + k.cpc.toFixed(2) : 'N/A'} | ${k.kd ?? 'N/A'} |\n`;
+    });
+    copyText(tableText, 'Keywords Data');
+  };
+
   const handleExportPDF = () => {
     if (!report) return;
     const w = window.open('', '_blank');
@@ -182,22 +195,27 @@ export default function UnifiedReportPage() {
   const keywords = report.keywords || [];
   const serpResults = report.serp_landscape || data.serp || [];
 
-  // 🛡️ Backend calculated fields
+  // Backend calculated fields
   const trafficEstimate = report.sixMonthTrafficEstimate || report.traffic_estimate || 0;
   const trendSummary = report.trendSummary || report.trend_summary || 'Evergreen trend';
   const chartData = report.chartData || {};
   const trendLine = chartData.trend_12m || [];
-  // ✅ CRITICAL FIX: trafficForecast variable is properly defined here
   const trafficForecast = chartData.traffic_forecast_6m || [];
   const marketShare = chartData.market_share || [];
 
-  const score = isProduct
-    ? (data.market_score || data.opportunity_score || 70)
-    : (trafficForecast.length ? Math.min(Math.round(trafficForecast[trafficForecast.length - 1]?.traffic / 1000), 100) : 65);
+  // ✅ CRITICAL FIX: Score calculation logic (Never 0/100)
+  let calculatedScore = 65; // Default Moderate score
+  if (isProduct) {
+    calculatedScore = data.market_score || data.opportunity_score || 70;
+  } else if (trafficForecast && trafficForecast.length > 0) {
+    const lastTraffic = trafficForecast[trafficForecast.length - 1]?.traffic || 0;
+    calculatedScore = Math.min(Math.max(Math.round(lastTraffic / 1000), 10), 100);
+  }
+  const score = calculatedScore;
 
   return (
     <main className="min-h-screen bg-[#0A0A0A] text-white font-['Inter']">
-      {/* Navbar */}
+      {/* Premium Navbar */}
       <nav className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-neutral-800">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -278,7 +296,7 @@ export default function UnifiedReportPage() {
             )}
           </div>
 
-          {/* 📋 COPY DROPDOWN */}
+          {/* 📋 COPY DROPDOWN (UPGRADED WITH KEYWORDS DATA) */}
           <div className="relative" ref={copyRef}>
             <button
               onClick={() => setCopyOpen(!copyOpen)}
@@ -293,6 +311,13 @@ export default function UnifiedReportPage() {
                   className="flex w-full px-4 py-2.5 text-sm hover:bg-neutral-800 text-left transition-colors"
                 >
                   Copy Complete Report
+                </button>
+                <div className="border-t border-neutral-700 my-1"></div>
+                <button
+                  onClick={() => { copyKeywords(); setCopyOpen(false); }}
+                  className="flex w-full px-4 py-2.5 text-sm hover:bg-neutral-800 text-left transition-colors"
+                >
+                  ✦ Copy Keywords Data (Client Ready)
                 </button>
                 <div className="border-t border-neutral-700 my-1"></div>
                 <button
@@ -321,7 +346,7 @@ export default function UnifiedReportPage() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 pb-20">
-        {/* KPI Cards */}
+        {/* KPI Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-8">
           <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800">
             <p className="text-xs text-neutral-400 mb-2">TREND</p>
@@ -344,7 +369,7 @@ export default function UnifiedReportPage() {
           </div>
         </div>
 
-        {/* Charts */}
+        {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {trendLine.length > 0 && (
             <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800">
@@ -388,7 +413,7 @@ export default function UnifiedReportPage() {
               <div className="flex flex-wrap justify-center gap-3 mt-2">
                 {marketShare.map((entry: any, idx: number) => (
                   <div key={idx} className="flex items-center gap-1 text-xs text-neutral-400">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS[idx % COLORS.length]} } />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS[idx % COLORS.length] }} />
                     {entry.name}: {entry.share}%
                   </div>
                 ))}
@@ -397,7 +422,7 @@ export default function UnifiedReportPage() {
           )}
         </div>
 
-        {/* Data Tables */}
+        {/* Data Table: Keywords */}
         {!isProduct && keywords.length > 0 && (
           <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800 mb-8">
             <div className="flex items-center justify-between mb-3">
@@ -430,12 +455,16 @@ export default function UnifiedReportPage() {
           </div>
         )}
 
-        {/* Complete Markdown Report */}
+        {/* Complete Markdown Report (Agency Level) */}
         <div className="max-w-4xl mx-auto mt-12">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Complete Report</h2>
           </div>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-3xl p-8 md:p-12 bg-[#0F0F14] border border-neutral-800">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass rounded-3xl p-8 md:p-12 bg-[#0F0F14] border border-neutral-800 shadow-2xl shadow-indigo-500/5"
+          >
             <article className="prose prose-invert max-w-none prose-headings:text-white prose-p:text-neutral-300 prose-strong:text-white prose-a:text-indigo-400">
               <ReactMarkdown>{report.markdown}</ReactMarkdown>
             </article>
