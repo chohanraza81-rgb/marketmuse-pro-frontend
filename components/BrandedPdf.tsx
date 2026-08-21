@@ -30,7 +30,9 @@ export const generateBrandedPDF = async (report: any, settings: any) => {
     <!-- TOC -->
     <div style="page-break-before: always; margin-bottom: 40px;">
       <h2 style="border-bottom: 2px solid ${primary}; padding-bottom: 10px; color: ${primary};">Table of Contents</h2>
-      ${Array.from(new Set((report.markdown || '').match(/(^|\n)(\d+\.\s+[A-Z ]+)/g) || [])).map(section => `
+      ${Array.from(new Set((report.markdown || '').match(/(^|\n)(\d+\.\s+[A-Z ]+)/g) || []))
+        // ✅ FIX: Explicitly type `section` as string
+        .map((section: string) => `
         <p style="color: ${textColor}; margin-bottom: 8px;">${section.replace(/\n/g, '')}</p>
       `).join('')}
     </div>
@@ -56,7 +58,7 @@ export const generateBrandedPDF = async (report: any, settings: any) => {
   html2pdf().set(opt).from(htmlContent).save();
 };
 
-// Helper to parse Markdown to styled HTML (Simple regex based for Word-like rendering)
+// Helper to parse Markdown to styled HTML
 const renderMarkdown = (md: string, primary: string, text: string, subText: string) => {
   if (!md) return '';
   let html = md
