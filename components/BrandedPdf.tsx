@@ -4,7 +4,7 @@ import pdfMake from "pdfmake/build/pdfmake";
 import pdfFonts from "pdfmake/build/vfs_fonts";
 
 // Fix PDF fonts for Next.js
-pdfMake.vfs = pdfFonts.pdfMake.vfs;
+(pdfMake as any).vfs = (pdfFonts as any).pdfMake.vfs;
 
 export const generateBrandedPDF = async (report: any, settings: any) => {
   const isLight = settings.pdfTheme === 'light';
