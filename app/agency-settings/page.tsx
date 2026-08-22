@@ -1,12 +1,16 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
-import { Sparkles, Save, Palette, Type, Building2 } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { toast } from 'sonner';
+import { Sparkles, Save, Palette, Type, Building2, Settings, ArrowRight } from 'lucide-react';
+import LiveStatus from '@/components/LiveStatus';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production.up.railway.app/api';
 
 export default function AgencySettingsPage() {
+  const pathname = usePathname();
+  
   const [agencyName, setAgencyName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [primaryColor, setPrimaryColor] = useState('#6366F1');
@@ -53,7 +57,6 @@ export default function AgencySettingsPage() {
       if (!res.ok) throw new Error('Failed to save');
       toast.success('White-Label settings saved!');
     } catch (err) {
-      // ✅ GUARANTEED FIX: Narrowing 'err' to 'Error'
       if (err instanceof Error) {
         toast.error(err.message);
       } else {
@@ -64,17 +67,43 @@ export default function AgencySettingsPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full" />
-      </main>
-    );
-  }
+  if (loading) return <main className="min-h-screen bg-[#0A0A0A] flex items-center justify-center"><div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full" /></main>;
 
   return (
-    <main className="min-h-screen bg-[#0A0A0A] text-white p-6 font-['Inter']">
-      <div className="max-w-6xl mx-auto">
+    <main className="min-h-screen bg-[#0A0A0A] text-white font-['Inter'] relative overflow-hidden">
+      {/* Background Glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-[500px] bg-indigo-600/20 blur-[120px] pointer-events-none" />
+
+      {/* 🧭 Premium Navbar with Links */}
+      <nav className="sticky top-0 z-50 bg-black/70 backdrop-blur-xl border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+              <Sparkles size={18} className="text-white" />
+            </div>
+            <span className="font-bold text-xl tracking-tight">Muse<span className="text-indigo-400">PRO</span></span>
+          </Link>
+
+          <div className="hidden md:flex items-center gap-1">
+            <Link href="/history" className={`px-4 py-2 text-sm ${pathname === '/history' ? 'text-white bg-white/10 rounded-lg' : 'text-neutral-400 hover:text-white transition-colors'}`}>History</Link>
+            <Link href="/compare" className={`px-4 py-2 text-sm ${pathname === '/compare' ? 'text-white bg-white/10 rounded-lg' : 'text-neutral-400 hover:text-white transition-colors'}`}>Compare</Link>
+            <Link href="/product-research" className={`px-4 py-2 text-sm ${pathname === '/product-research' ? 'text-white bg-white/10 rounded-lg' : 'text-neutral-400 hover:text-white transition-colors'}`}>Product</Link>
+            <Link href="/seo-report" className={`px-4 py-2 text-sm ${pathname === '/seo-report' ? 'text-white bg-white/10 rounded-lg' : 'text-neutral-400 hover:text-white transition-colors'}`}>SEO</Link>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <LiveStatus />
+            <Link href="/agency-settings" className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium ${pathname === '/agency-settings' ? 'bg-indigo-600 text-white' : 'bg-white/5 border border-white/10 hover:bg-white/10'}`}>
+              <Settings size={16} /> Agency
+            </Link>
+            <Link href="/seo-report" className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-sm font-semibold shadow-lg shadow-indigo-500/20">
+              Get Started <ArrowRight size={16} />
+            </Link>
+          </div>
+        </div>
+      </nav>
+
+      <div className="max-w-6xl mx-auto px-6 py-12 relative z-10">
         <h1 className="text-3xl font-bold mb-8 bg-gradient-to-r from-white to-neutral-400 bg-clip-text text-transparent">White-Label Studio</h1>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
