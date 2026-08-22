@@ -1,86 +1,119 @@
 'use client';
 import { toast } from 'sonner';
+import pdfMake from "pdfmake/build/pdfmake";
+import pdfFonts from "pdfmake/build/vfs_fonts";
+
+// Fix PDF fonts for Next.js
+pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
 export const generateBrandedPDF = async (report: any, settings: any) => {
   const isLight = settings.pdfTheme === 'light';
-  const bgColor = isLight ? '#FFFFFF' : '#0F0F14';
   const textColor = isLight ? '#111111' : '#FFFFFF';
   const subText = isLight ? '#666666' : '#AAAAAA';
   const primary = settings.primaryColor;
+  
+  // Functions to parse Markdown into PDFMake content objects
+  const markdownToPdfContent = (md: string) => {
+    const lines = md.split('\n');
+    const content: any[] = [];
 
-  // Clean, professional HTML layout (No 100vh, No massive gaps)
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>${report.niche} - Report</title>
-      <style>
-        @page { margin: 20px; }
-        body { 
-          font-family: ${settings.fontFamily || 'Inter'}, sans-serif; 
-          background: ${bgColor}; 
-          color: ${textColor}; 
-          line-height: 1.6; 
-          font-size: 14px; 
-        }
-        .header { border-bottom: 2px solid ${primary}; padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .agency-name { font-weight: bold; font-size: 20px; color: ${primary}; }
-        .report-type { font-size: 11px; color: ${subText}; }
-        h1 { font-size: 24px; color: ${primary}; border-bottom: 1px solid ${subText}; padding-bottom: 5px; }
-        h2 { font-size: 18px; color: ${primary}; margin-top: 20px; }
-        h3 { font-size: 16px; color: ${textColor}; margin-top: 15px; }
-        table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 11px; }
-        th, td { border: 1px solid ${subText}; padding: 6px; text-align: left; }
-        th { background-color: ${primary}20; color: ${textColor}; }
-        p, li { color: ${textColor}; margin: 5px 0; }
-        .footer { margin-top: 30px; border-top: 1px solid ${primary}; padding-top: 10px; font-size: 10px; color: ${subText}; text-align: center; }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <div class="agency-name">${settings.agencyName || 'Agency'}</div>
-        <div class="report-type">${report.type === 'seo' ? 'SEO RESEARCH REPORT' : 'PRODUCT INTELLIGENCE REPORT'}</div>
-      </div>
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+
+      // Headings
+      if (trimmed.startsWith('### ')) content.push({ text: trimmed.substring(4), fontSize: 14, bold: true, color: primary, margin: [0, 10, 0, 5] });
+      else if (trimmed.startsWith('## ')) content.push({ text: trimmed.substring(3), fontSize: 16, bold: true, color: primary, margin: [0, 15, 0, 5] });
+      else if (trimmed.startsWith('# ')) content.push({ text: trimmed.substring(2), fontSize: 20, bold: true, color: primary, margin: [0, 20, 0, 10] });
       
-      <h1>${report.niche}</h1>
-      <p style="font-size: 12px; color: ${subText};">
-        Prepared for: ${report.clientName || 'Client'} &nbsp; | &nbsp; Date: ${new Date().toLocaleDateString()}
-      </p>
+      // Tables
+      else if (trimmed.startsWith('|') && trimmed.endsWith('|') && !trimmed.includes('---')) {
+        const cols = trimmed.split('|').filter(c => c.trim() !== '');
+        content.push({
+          table: {
+            widths: Array(cols.length).fill('auto'),
+            body: [cols.map(c => ({ text: c.trim(), style: 'tableHeader' }))]
+          },
+          layout: 'lightHorizontalLines',
+          margin: [0, 5, 0, 10]
+        });
+      }
+      // Lists
+      else if (trimmed.startsWith('- ')) {
+        content.push({ text: trimmed.substring(2), margin: [10, 2, 0, 2], color: textColor });
+      }
+      // Paragraphs
+      else {
+        content.push({ text: trimmed, margin: [0, 2, 0, 2], color: textColor });
+      }
+    });
+    return content;
+  };
 
-      <div>
-        ${report.markdown
-          .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-          .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-          .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-          .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
-          .replace(/^\s*\n\*\s(.*)/gim, '<ul><li>$1</li></ul>')
-          .replace(/^\s*\n(\d+)\.\s(.*)/gim, '<ol><li>$2</li></ol>')
-          .replace(/\n/gim, '<br />')
-        }
-      </div>
+  // Colors for Header and Footer
+  const header = () => {
+    return {
+      margin: [40, 20, 40, 0],
+      columns: [
+        { text: settings.agencyName || 'Agency', bold: true, fontSize: 12, color: primary },
+        { text: report.type === 'seo' ? 'SEO RESEARCH REPORT' : 'PRODUCT INTELLIGENCE REPORT', alignment: 'right', fontSize: 10, color: subText }
+      ]
+    };
+  };
 
-      <div class="footer">
-        ${settings.footerText}
-      </div>
-    </body>
-    </html>
-  `;
+  const footer = (currentPage: number, pageCount: number) => {
+    return {
+      margin: [40, 20, 40, 0],
+      columns: [
+        { text: settings.footerText || 'Confidential', fontSize: 10, color: subText },
+        { text: `${currentPage} / ${pageCount}`, alignment: 'right', fontSize: 10, color: subText }
+      ]
+    };
+  };
 
-  // Open a hidden window with the content and trigger the native Print Dialog
-  const w = window.open('', '_blank');
-  if (!w) {
-    toast.error('Please allow pop-ups to generate PDF');
-    return;
+  // 1. Cover Content (No huge blank space, just clean text at the top)
+  const cover = [
+    { text: report.niche, fontSize: 28, bold: true, color: primary, margin: [0, 100, 0, 20] },
+    { text: report.type === 'seo' ? 'SEO RESEARCH REPORT' : 'PRODUCT INTELLIGENCE REPORT', fontSize: 14, color: subText, margin: [0, 0, 0, 40] },
+    { text: `Prepared For: ${report.clientName || 'Client'}`, fontSize: 12, margin: [0, 0, 0, 5], color: textColor },
+    { text: `Date: ${new Date().toLocaleDateString()}`, fontSize: 12, margin: [0, 0, 0, 5], color: textColor }
+  ];
+
+  // 2. Main Report Content
+  const reportContent = markdownToPdfContent(report.markdown);
+
+  // Construct PDF Document Definition
+  const dd = {
+    pageSize: 'A4',
+    pageMargins: [40, 70, 40, 60],
+    header: header,
+    footer: footer,
+    content: [
+      ...cover,
+      { text: '', pageBreak: 'after' }, // Force clean page break after cover (no blank pages)
+      ...reportContent
+    ],
+    defaultStyle: {
+      fontSize: 11,
+      lineHeight: 1.4
+    },
+    styles: {
+      tableHeader: {
+        bold: true,
+        fontSize: 10,
+        color: textColor,
+        fillColor: isLight ? '#eeeeee' : '#222222'
+      }
+    }
+  };
+
+  toast.loading('Generating Premium PDF...');
+  try {
+    pdfMake.createPdf(dd).download(`${(settings.agencyName || 'Report').replace(/\s/g, '_')}_${report.niche}.pdf`);
+    toast.dismiss();
+    toast.success('Premium PDF downloaded!');
+  } catch (err) {
+    toast.dismiss();
+    toast.error('Failed to generate PDF');
   }
-
-  w.document.write(htmlContent);
-  w.document.close();
-  w.focus();
-
-  // Wait for content to load, then print
-  setTimeout(() => {
-    w.print();
-    toast.success('Select "Save as PDF" in the print dialog');
-  }, 500);
 };
