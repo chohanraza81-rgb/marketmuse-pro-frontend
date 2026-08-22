@@ -1,4 +1,6 @@
 'use client';
+// ✅ FIX: Toast import added
+import { toast } from 'sonner';
 import html2pdf from 'html2pdf.js';
 
 // Advanced Markdown to HTML parser for PDF
@@ -18,12 +20,10 @@ const renderMarkdown = (md: string, primary: string, text: string, subText: stri
   lines.forEach(line => {
     const trimmed = line.trim();
 
-    // Headings
     if (trimmed.startsWith('### ')) html += `<h3 style="color:${primary}; margin-top:20px;">${trimmed.substring(4)}</h3>`;
     else if (trimmed.startsWith('## ')) html += `<h2 style="color:${primary}; margin-top:30px; border-bottom:1px solid ${primary}; padding-bottom:5px;">${trimmed.substring(3)}</h2>`;
     else if (trimmed.startsWith('# ')) html += `<h1 style="color:${primary}; margin-top:40px;">${trimmed.substring(2)}</h1>`;
     
-    // Table
     else if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
       closeList();
       if (trimmed.includes('---')) { inTable = false; html += '</tbody></table>'; return; }
@@ -38,7 +38,6 @@ const renderMarkdown = (md: string, primary: string, text: string, subText: stri
               </tr>`;
     }
     
-    // Lists
     else if (trimmed.startsWith('- ')) {
       if (inOrderedList) { closeList(); }
       if (!inList) { html += '<ul style="color:' + text + '; margin:10px 0; padding-left:20px;">'; inList = true; }
@@ -50,7 +49,6 @@ const renderMarkdown = (md: string, primary: string, text: string, subText: stri
       html += `<li>${trimmed.replace(/^\d+\.\s/, '')}</li>`;
     }
     
-    // Paragraphs
     else if (trimmed !== '') {
       closeList();
       html += `<p style="margin:10px 0; font-family: Arial; font-size:14px; color:${text};">${trimmed}</p>`;
