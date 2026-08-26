@@ -1,22 +1,18 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { toast } from 'sonner';
-import { Loader2, Trash2, Download, Edit, Eye, Search, TrendingUp, FileText, RefreshCw, AlertTriangle, Home, Sparkles } from 'lucide-react';
+import { Loader2, Trash2, Download, Edit, Eye, Search, TrendingUp, FileText, RefreshCw, AlertTriangle, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production.up.railway.app/api';
 
-// 🚩 Premium Country Flags Map
 const countryFlags: Record<string, string> = {
   us: '🇺🇸', gb: '🇬🇧', ca: '🇨🇦', au: '🇦🇺', de: '🇩🇪', sg: '🇸🇬',
   sa: '🇸🇦', ae: '🇦🇪', pk: '🇵🇰', in: '🇮🇳', tr: '🇹🇷', my: '🇲🇾'
 };
 
 export default function HistoryPage() {
-  const pathname = usePathname();
-
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,8 +24,9 @@ export default function HistoryPage() {
   const [editingReportId, setEditingReportId] = useState(null);
   const [newClientName, setNewClientName] = useState('');
   const [newMarkdown, setNewMarkdown] = useState('');
+  const [newRemark, setNewRemark] = useState(''); // ✅ Remark State
 
-  // 🛡️ Advanced Delete Modal States
+  // Advanced Delete Modal States
   const [deleteModalReport, setDeleteModalReport] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -59,9 +56,7 @@ export default function HistoryPage() {
       const a = document.createElement('a');
       a.href = url;
       a.download = `MusePRO_Report_${niche}.txt`;
-      document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast.success('TXT downloaded successfully');
     } catch (err: any) {
@@ -72,6 +67,7 @@ export default function HistoryPage() {
   const handleEdit = async (report: any) => {
     setEditingReportId(report._id);
     setNewClientName(report.clientName || '');
+    setNewRemark(report.remark || ''); // ✅ Load previous remark
     setEditModal(true);
     try {
       const res = await fetch(`${API_URL}/reports/${report._id}`);
@@ -82,13 +78,14 @@ export default function HistoryPage() {
     }
   };
 
+  // ✅ Save Changes with Remark
   const handleSaveChanges = async () => {
     if (!editingReportId) return;
     try {
       const res = await fetch(`${API_URL}/reports/${editingReportId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientName: newClientName, markdown: newMarkdown })
+        body: JSON.stringify({ clientName: newClientName, markdown: newMarkdown, remark: newRemark })
       });
       if (!res.ok) throw new Error('Failed to save changes');
       toast.success('Report updated successfully');
@@ -99,10 +96,7 @@ export default function HistoryPage() {
     }
   };
 
-  const openDeleteModal = (report: any) => {
-    setDeleteModalReport(report);
-  };
-
+  const openDeleteModal = (report: any) => { setDeleteModalReport(report); };
   const confirmDelete = async () => {
     if (!deleteModalReport) return;
     setIsDeleting(true);
@@ -114,9 +108,7 @@ export default function HistoryPage() {
       fetchReports();
     } catch (err: any) {
       toast.error(err.message);
-    } finally {
-      setIsDeleting(false);
-    }
+    } finally { setIsDeleting(false); }
   };
 
   const filteredReports = reports
@@ -137,40 +129,11 @@ export default function HistoryPage() {
   if (loading) return <main className="min-h-screen bg-[#0A0A0A] flex items-center justify-center"><Loader2 size={32} className="animate-spin text-indigo-400" /></main>;
 
   return (
-    <main className="min-h-screen bg-[#0A0A0A] text-white font-['Inter'] relative overflow-hidden">
-      {/* Premium Background Glow */}
+    <main className="min-h-screen bg-[#0A0A0A] text-white p-6 font-['Inter'] relative overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-br from-indigo-600/20 to-purple-600/10 blur-3xl pointer-events-none" />
       
-      {/* 🧭 GLOBAL NAVBAR */}
-      <nav className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-neutral-800/50">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <Sparkles size={16} className="text-white" />
-            </div>
-            <span className="font-bold text-lg">Muse<span className="text-indigo-400">PRO</span></span>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link href="/" className={`text-sm px-4 py-2 rounded-full transition-all ${pathname === '/' ? 'bg-indigo-600 text-white' : 'bg-neutral-800 hover:bg-neutral-700 border border-neutral-700'}`}>
-              Home
-            </Link>
-            <Link href="/seo-report" className={`text-sm px-4 py-2 rounded-full transition-all ${pathname === '/seo-report' ? 'bg-indigo-600 text-white' : 'bg-neutral-800 hover:bg-neutral-700 border border-neutral-700'}`}>
-              SEO Report
-            </Link>
-            <Link href="/product-research" className={`text-sm px-4 py-2 rounded-full transition-all ${pathname === '/product-research' ? 'bg-indigo-600 text-white' : 'bg-neutral-800 hover:bg-neutral-700 border border-neutral-700'}`}>
-              Product Report
-            </Link>
-            <Link href="/history" className={`text-sm px-4 py-2 rounded-full transition-all ${pathname === '/history' ? 'bg-indigo-600 text-white' : 'bg-neutral-800 hover:bg-neutral-700 border border-neutral-700'}`}>
-              History
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      <div className="max-w-7xl mx-auto px-6 py-8 relative z-10">
-        
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+      <div className="max-w-7xl mx-auto relative z-10">
+        <div className="flex justify-between items-center mb-8 mt-4">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-neutral-400 bg-clip-text text-transparent">Report History</h1>
             <p className="text-neutral-400 mt-1 text-sm">Agency-level intelligence. Track, edit, and export your campaigns.</p>
@@ -241,9 +204,21 @@ export default function HistoryPage() {
                     <p className="text-xs text-neutral-500 mt-1 uppercase tracking-wider">
                       {r.type === 'seo' ? 'SEO' : 'Product'} 
                       <span className="mx-2 text-neutral-700">•</span> 
-                      <span className="text-base align-middle">{countryFlags[r.country] || '🌍'}</span> 
-                      <span className="ml-1">{r.country.toUpperCase()}</span>
+                      {countryFlags[r.country] || '🌍'} <span className="ml-1">{r.country.toUpperCase()}</span>
                     </p>
+                    {/* ✅ DATE AND TIME DISPLAY */}
+                    <p className="text-[11px] text-neutral-600 mt-1">
+                      Created: {new Date(r.createdAt).toLocaleString()} 
+                      {r.updatedAt && new Date(r.updatedAt).getTime() > new Date(r.createdAt).getTime() + 1000 && (
+                        <span className="ml-2 text-indigo-400">| Updated: {new Date(r.updatedAt).toLocaleString()}</span>
+                      )}
+                    </p>
+                    {/* ✅ REMARK DISPLAY */}
+                    {r.remark && (
+                      <p className="text-xs mt-2 bg-blue-500/10 text-blue-300 border border-blue-500/20 rounded-lg px-2 py-1 max-w-lg">
+                        <MessageSquare size={12} className="inline mr-1" /> {r.remark}
+                      </p>
+                    )}
                   </div>
                 </div>
                 
@@ -260,7 +235,7 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      {/* Edit Modal */}
+      {/* Edit Modal with Remark */}
       <AnimatePresence>
       {editModal && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
@@ -273,7 +248,12 @@ export default function HistoryPage() {
               </div>
               <div>
                 <label className="text-sm text-neutral-400 mb-2 block">Report Content (Markdown)</label>
-                <textarea value={newMarkdown} onChange={(e) => setNewMarkdown(e.target.value)} rows={12} className="w-full p-3 rounded-xl bg-[#0A0A0A] border border-white/10 focus:border-indigo-500 outline-none text-white font-mono text-sm transition-all resize-none" />
+                <textarea value={newMarkdown} onChange={(e) => setNewMarkdown(e.target.value)} rows={8} className="w-full p-3 rounded-xl bg-[#0A0A0A] border border-white/10 focus:border-indigo-500 outline-none text-white font-mono text-sm transition-all resize-none" />
+              </div>
+              {/* ✅ REMARK INPUT */}
+              <div>
+                <label className="text-sm text-neutral-400 mb-2 block">Update Remarks (Why are you updating this?)</label>
+                <input type="text" value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="e.g. Updated keywords for 2026" className="w-full p-3 rounded-xl bg-[#0A0A0A] border border-white/10 focus:border-indigo-500 outline-none text-white transition-all" />
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
@@ -285,7 +265,6 @@ export default function HistoryPage() {
       )}
       </AnimatePresence>
 
-      {/* Advanced Delete Modal */}
       <AnimatePresence>
       {deleteModalReport && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[60] p-4">
@@ -301,11 +280,7 @@ export default function HistoryPage() {
             </p>
             <div className="flex gap-3 justify-center">
               <button onClick={() => setDeleteModalReport(null)} disabled={isDeleting} className="px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-medium transition-all">Cancel</button>
-              <button 
-                onClick={confirmDelete} 
-                disabled={isDeleting}
-                className="px-6 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-bold transition-all shadow-lg shadow-red-500/20 flex items-center gap-2"
-              >
+              <button onClick={confirmDelete} disabled={isDeleting} className="px-6 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-bold transition-all shadow-lg shadow-red-500/20 flex items-center gap-2">
                 {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                 {isDeleting ? 'Deleting...' : 'Delete'}
               </button>
