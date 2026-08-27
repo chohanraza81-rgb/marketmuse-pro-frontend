@@ -2,8 +2,9 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { Loader2, Trash2, Download, Edit, Eye, Search, TrendingUp, FileText, RefreshCw, AlertTriangle, MessageSquare } from 'lucide-react';
+import { Loader2, Trash2, Download, Edit, Eye, Search, TrendingUp, FileText, RefreshCw, AlertTriangle, MessageSquare, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import LiveStatus from '@/components/LiveStatus';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production.up.railway.app/api';
 
@@ -129,10 +130,32 @@ export default function HistoryPage() {
   if (loading) return <main className="min-h-screen bg-[#0A0A0A] flex items-center justify-center"><Loader2 size={32} className="animate-spin text-indigo-400" /></main>;
 
   return (
-    <main className="min-h-screen bg-[#0A0A0A] text-white p-6 font-['Inter'] relative overflow-hidden">
+    <main className="min-h-screen bg-[#0A0A0A] text-white font-['Inter'] relative overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-br from-indigo-600/20 to-purple-600/10 blur-3xl pointer-events-none" />
-      
-      <div className="max-w-7xl mx-auto relative z-10">
+
+      {/* 🧭 GLOBAL NAVBAR */}
+      <nav className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-neutral-800/50">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+              <Sparkles size={16} className="text-white" />
+            </div>
+            <span className="font-bold text-lg">Muse<span className="text-indigo-400">PRO</span></span>
+          </Link>
+
+          <div className="hidden md:flex items-center gap-2">
+            <Link href="/" className="text-sm px-4 py-2 rounded-full bg-neutral-800 hover:bg-neutral-700 border border-neutral-700">Home</Link>
+            <Link href="/seo-report" className="text-sm px-4 py-2 rounded-full bg-neutral-800 hover:bg-neutral-700 border border-neutral-700">SEO Report</Link>
+            <Link href="/product-research" className="text-sm px-4 py-2 rounded-full bg-neutral-800 hover:bg-neutral-700 border border-neutral-700">Product Report</Link>
+            <Link href="/technical-seo" className="text-sm px-4 py-2 rounded-full bg-neutral-800 hover:bg-neutral-700 border border-neutral-700">Tech SEO</Link>
+            <Link href="/history" className="text-sm px-4 py-2 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white">History</Link>
+            <Link href="/agency-settings" className="text-sm px-4 py-2 rounded-full bg-neutral-800 hover:bg-neutral-700 border border-neutral-700">Agency</Link>
+            <LiveStatus />
+          </div>
+        </div>
+      </nav>
+
+      <div className="max-w-7xl mx-auto px-6 py-8 relative z-10">
         <div className="flex justify-between items-center mb-8 mt-4">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-neutral-400 bg-clip-text text-transparent">Report History</h1>
@@ -265,6 +288,7 @@ export default function HistoryPage() {
       )}
       </AnimatePresence>
 
+      {/* Delete Modal */}
       <AnimatePresence>
       {deleteModalReport && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[60] p-4">
