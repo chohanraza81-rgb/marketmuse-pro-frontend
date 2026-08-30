@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { 
   Sparkles, TrendingUp, BarChart3, Globe, FileText, 
   Settings, ArrowRight, Zap, ShieldCheck, Gauge, LayoutDashboard,
-  Mail, Wifi, WifiOff, Loader2
+  Mail, Wifi, WifiOff, Loader2, History, GitCompare
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -56,15 +56,11 @@ export default function HomePage() {
             <span className="font-bold text-xl tracking-tight whitespace-nowrap">Muse<span className="text-indigo-400">PRO</span></span>
           </Link>
 
-          {/* Navigation Links */}
+          {/* Center Navigation Links (without History) */}
           <div className="hidden lg:flex items-center gap-1">
             <Link href="/dashboard" className="px-3 py-2 text-sm text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5 rounded-lg hover:bg-white/5 whitespace-nowrap">
               <LayoutDashboard size={14} />
               <span>Dashboard</span>
-            </Link>
-            <Link href="/history" className="px-3 py-2 text-sm text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5 rounded-lg hover:bg-white/5 whitespace-nowrap">
-              <FileText size={14} />
-              <span>History</span>
             </Link>
             <Link href="/product-research" className="px-3 py-2 text-sm text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5 rounded-lg hover:bg-white/5 whitespace-nowrap">
               <BarChart3 size={14} />
@@ -80,9 +76,21 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {/* Right Side */}
+          {/* Right Side: History, Compare, Status, Agency, Get Started */}
           <div className="flex items-center gap-3 flex-shrink-0">
-            {/* System Status - One Line */}
+            {/* History Link */}
+            <Link href="/history" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-white transition-colors rounded-lg hover:bg-white/5 whitespace-nowrap">
+              <History size={14} />
+              <span>History</span>
+            </Link>
+
+            {/* Compare Link */}
+            <Link href="/compare" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-white transition-colors rounded-lg hover:bg-white/5 whitespace-nowrap">
+              <GitCompare size={14} />
+              <span>Compare</span>
+            </Link>
+
+            {/* System Status */}
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all whitespace-nowrap ${
               apiStatus === 'online' 
                 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
@@ -98,10 +106,13 @@ export default function HomePage() {
               </span>
             </div>
 
-            <Link href="/agency-settings" className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm font-medium whitespace-nowrap">
+            {/* Agency Link */}
+            <Link href="/agency-settings" className="hidden xl:flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm font-medium whitespace-nowrap">
               <Settings size={14} />
               <span>Agency</span>
             </Link>
+
+            {/* Get Started */}
             <Link href="/seo-report" className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-sm font-semibold shadow-lg shadow-indigo-500/20 whitespace-nowrap">
               Get Started <ArrowRight size={14} />
             </Link>
