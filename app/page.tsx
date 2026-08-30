@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { 
   Sparkles, TrendingUp, BarChart3, Globe, FileText, 
   Settings, ArrowRight, Zap, ShieldCheck, Gauge, LayoutDashboard,
-  Mail, Wifi, WifiOff, Loader2, ChevronRight
+  Mail, Wifi, WifiOff, Loader2
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -20,20 +20,15 @@ export default function HomePage() {
           method: 'GET',
           signal: AbortSignal.timeout(5000)
         });
-        if (res.ok) {
-          setApiStatus('online');
-        } else {
-          setApiStatus('offline');
-        }
-      } catch (err) {
+        setApiStatus(res.ok ? 'online' : 'offline');
+      } catch {
         setApiStatus('offline');
       }
     };
 
     checkAPI();
-    const interval = setInterval(checkAPI, 30000); // Check every 30 seconds
+    const interval = setInterval(checkAPI, 30000);
     
-    // Browser online/offline listeners
     const handleOnline = () => checkAPI();
     const handleOffline = () => setApiStatus('offline');
     window.addEventListener('online', handleOnline);
@@ -52,54 +47,63 @@ export default function HomePage() {
       
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
               <Sparkles size={18} className="text-white" />
             </div>
-            <span className="font-bold text-xl tracking-tight">Muse<span className="text-indigo-400">PRO</span></span>
+            <span className="font-bold text-xl tracking-tight whitespace-nowrap">Muse<span className="text-indigo-400">PRO</span></span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-1">
-            <Link href="/dashboard" className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5 rounded-lg hover:bg-white/5">
-              <LayoutDashboard size={14} /> Dashboard
+          {/* Navigation Links */}
+          <div className="hidden lg:flex items-center gap-1">
+            <Link href="/dashboard" className="px-3 py-2 text-sm text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5 rounded-lg hover:bg-white/5 whitespace-nowrap">
+              <LayoutDashboard size={14} />
+              <span>Dashboard</span>
             </Link>
-            <Link href="/history" className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5 rounded-lg hover:bg-white/5">
-              <FileText size={14} /> History
+            <Link href="/history" className="px-3 py-2 text-sm text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5 rounded-lg hover:bg-white/5 whitespace-nowrap">
+              <FileText size={14} />
+              <span>History</span>
             </Link>
-            <Link href="/product-research" className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5 rounded-lg hover:bg-white/5">
-              <BarChart3 size={14} /> Product
+            <Link href="/product-research" className="px-3 py-2 text-sm text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5 rounded-lg hover:bg-white/5 whitespace-nowrap">
+              <BarChart3 size={14} />
+              <span>Product</span>
             </Link>
-            <Link href="/seo-report" className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5 rounded-lg hover:bg-white/5">
-              <TrendingUp size={14} /> SEO
+            <Link href="/seo-report" className="px-3 py-2 text-sm text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5 rounded-lg hover:bg-white/5 whitespace-nowrap">
+              <TrendingUp size={14} />
+              <span>SEO</span>
             </Link>
-            <Link href="/technical-seo" className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5 rounded-lg hover:bg-white/5">
-              <Gauge size={14} /> Tech SEO
+            <Link href="/technical-seo" className="px-3 py-2 text-sm text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5 rounded-lg hover:bg-white/5 whitespace-nowrap">
+              <Gauge size={14} />
+              <span>Tech SEO</span>
             </Link>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* ACTUAL API STATUS INDICATOR */}
-            <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border transition-all ${
+          {/* Right Side */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {/* System Status - One Line */}
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all whitespace-nowrap ${
               apiStatus === 'online' 
                 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                 : apiStatus === 'offline'
-                  ? 'bg-red-500/10 text-red-400 border-red-500/30 animate-pulse'
+                  ? 'bg-red-500/10 text-red-400 border-red-500/30'
                   : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
             }`}>
-              {apiStatus === 'checking' && <Loader2 size={14} className="animate-spin" />}
-              {apiStatus === 'online' && <Wifi size={14} />}
-              {apiStatus === 'offline' && <WifiOff size={14} />}
-              <span>
+              {apiStatus === 'checking' && <Loader2 size={12} className="animate-spin flex-shrink-0" />}
+              {apiStatus === 'online' && <Wifi size={12} className="flex-shrink-0" />}
+              {apiStatus === 'offline' && <WifiOff size={12} className="flex-shrink-0" />}
+              <span className="whitespace-nowrap">
                 {apiStatus === 'online' ? 'System Online' : apiStatus === 'offline' ? 'System Offline' : 'Checking...'}
               </span>
             </div>
 
-            <Link href="/agency-settings" className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm font-medium">
-              <Settings size={16} /> Agency
+            <Link href="/agency-settings" className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm font-medium whitespace-nowrap">
+              <Settings size={14} />
+              <span>Agency</span>
             </Link>
-            <Link href="/seo-report" className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-sm font-semibold shadow-lg shadow-indigo-500/20">
-              Get Started <ArrowRight size={16} />
+            <Link href="/seo-report" className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-sm font-semibold shadow-lg shadow-indigo-500/20 whitespace-nowrap">
+              Get Started <ArrowRight size={14} />
             </Link>
           </div>
         </div>
@@ -143,16 +147,16 @@ export default function HomePage() {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="mt-10 flex flex-wrap justify-center gap-4"
         >
-          <Link href="/dashboard" className="px-8 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 font-bold transition-all shadow-xl shadow-indigo-500/20 flex items-center gap-2">
+          <Link href="/dashboard" className="px-8 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 font-bold transition-all shadow-xl shadow-indigo-500/20 flex items-center gap-2 whitespace-nowrap">
             <LayoutDashboard size={20} /> Dashboard
           </Link>
-          <Link href="/seo-report" className="px-8 py-4 rounded-2xl bg-white/10 border border-white/20 hover:bg-white/20 backdrop-blur-md font-bold transition-all flex items-center gap-2">
+          <Link href="/seo-report" className="px-8 py-4 rounded-2xl bg-white/10 border border-white/20 hover:bg-white/20 backdrop-blur-md font-bold transition-all flex items-center gap-2 whitespace-nowrap">
             <TrendingUp size={20} /> SEO Report
           </Link>
-          <Link href="/technical-seo" className="px-8 py-4 rounded-2xl bg-white/10 border border-white/20 hover:bg-white/20 backdrop-blur-md font-bold transition-all flex items-center gap-2">
+          <Link href="/technical-seo" className="px-8 py-4 rounded-2xl bg-white/10 border border-white/20 hover:bg-white/20 backdrop-blur-md font-bold transition-all flex items-center gap-2 whitespace-nowrap">
             <Gauge size={20} /> Technical SEO
           </Link>
-          <Link href="/product-research" className="px-8 py-4 rounded-2xl bg-white/10 border border-white/20 hover:bg-white/20 backdrop-blur-md font-bold transition-all flex items-center gap-2">
+          <Link href="/product-research" className="px-8 py-4 rounded-2xl bg-white/10 border border-white/20 hover:bg-white/20 backdrop-blur-md font-bold transition-all flex items-center gap-2 whitespace-nowrap">
             <BarChart3 size={20} /> Product Research
           </Link>
         </motion.div>
@@ -228,7 +232,7 @@ export default function HomePage() {
               <div className={`w-12 h-12 rounded-xl ${item.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
                 <item.icon size={24} className={item.iconColor} />
               </div>
-              <h3 className="text-2xl font-bold mb-3">{item.title}</h3>
+              <h3 className="text-2xl font-bold mb-3 whitespace-nowrap">{item.title}</h3>
               <p className="text-neutral-400 leading-relaxed">{item.description}</p>
             </motion.div>
           ))}
@@ -245,7 +249,7 @@ export default function HomePage() {
         >
           <h2 className="text-3xl md:text-4xl font-black mb-4">Ready to dominate your market?</h2>
           <p className="text-neutral-400 text-lg mb-8">Start generating world-class reports in seconds.</p>
-          <Link href="/seo-report" className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 font-bold transition-all shadow-xl shadow-indigo-500/20">
+          <Link href="/seo-report" className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 font-bold transition-all shadow-xl shadow-indigo-500/20 whitespace-nowrap">
             Get Started Free <ArrowRight size={20} />
           </Link>
         </motion.div>
