@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  AreaChart, Area, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  AreaChart, Area, LineChart, Line, BarChart as RechartsBarChart, Bar, PieChart, Pie, Cell,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from 'recharts';
@@ -14,7 +14,7 @@ import {
   Download, Mail, Share2, Printer, Camera, Sparkles, ArrowLeft,
   Copy, Check, Clock, Send, LayoutDashboard, MailOpen,
   Share2 as ShareIcon, TrendingUp, Globe, Zap, X, Package,
-  DollarSign, Users, Target, FileText, Gauge
+  DollarSign, Users, Target, FileText, Gauge, BarChart, Paperclip
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -108,13 +108,27 @@ export default function ReportDashboard() {
     try {
       const emailAttachments = [];
       
-      // Only add markdown attachment
+      // Markdown attachment
       if (attachments.includes('markdown') && report?.markdown) {
         emailAttachments.push({
           name: `${report.niche?.replace(/\s+/g, '_')}_report.md`,
           content: Buffer.from(report.markdown).toString('base64'),
           contentType: 'text/markdown',
         });
+      }
+
+      // PDF attachment (dashboard snapshot as PNG)
+      if (attachments.includes('pdf')) {
+        const element = document.getElementById('dashboard-content');
+        if (element) {
+          const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#0A0A0F', useCORS: true });
+          const imgData = canvas.toDataURL('image/png').split(',')[1];
+          emailAttachments.push({
+            name: `${report.niche?.replace(/\s+/g, '_')}_dashboard.png`,
+            content: imgData,
+            contentType: 'image/png',
+          });
+        }
       }
 
       const payload = {
@@ -193,22 +207,8 @@ export default function ReportDashboard() {
   const isProduct = report.type === 'product';
   const isTechnical = report.type === 'seo' && data?.subtype === 'technical';
 
-  // ============ PRODUCT REPORT DATA EXTRACTION ============
-  const financialModel = isProduct ? (data?.financial_model || []) : [];
-  const consumerPersona = isProduct ? (data?.consumer_persona || []) : [];
-  const competitionAnalysis = isProduct ? (data?.competition_analysis || []) : [];
-  const sourcingAnalysis = isProduct ? (data?.sourcing_analysis || []) : [];
-  const marketingChannels = isProduct ? (data?.marketing_channels || []) : [];
-  const growthAccelerators = isProduct ? (data?.growth_accelerators || []) : [];
-  const launchPlan = isProduct ? (data?.launch_action_plan || []) : [];
-  const scenarioPlanning = isProduct ? (data?.scenario_planning || []) : [];
-  const riskAssessment = isProduct ? (data?.risk_assessment || []) : [];
-  const swotAnalysis = isProduct ? (data?.swot_analysis || []) : [];
-
-  // ============ OVERALL SCORE ============
   const overallScore = data?.score || (isProduct ? 75 : 50);
 
-  // ============ CHART DATA WITH FALLBACKS ============
   const trendData = chart_data?.trend_12m?.length > 0 
     ? chart_data.trend_12m 
     : Array.from({ length: 12 }, (_, i) => ({ month: `M${i + 1}`, value: Math.floor(30 + Math.random() * 70) }));
@@ -217,20 +217,18 @@ export default function ReportDashboard() {
     ? chart_data.traffic_forecast_6m 
     : Array.from({ length: 6 }, (_, i) => ({ month: `M${i + 1}`, traffic: Math.floor(500 + Math.random() * 1500) }));
 
-  // ============ KPI CARDS DATA ============
   const kpiCards = isProduct ? [
     { label: 'Viability Score', value: `${overallScore}/100`, icon: Target, color: 'text-indigo-400' },
-    { label: 'Financial Model', value: financialModel?.length || 0, icon: DollarSign, color: 'text-emerald-400' },
-    { label: 'Personas', value: consumerPersona?.length || 0, icon: Users, color: 'text-purple-400' },
-    { label: 'Competitors', value: competitionAnalysis?.length || 0, icon: TrendingUp, color: 'text-pink-400' },
+    { label: 'Financial Tiers', value: data?.financial_model?.length || 0, icon: DollarSign, color: 'text-emerald-400' },
+    { label: 'Personas', value: data?.consumer_persona?.length || 0, icon: Users, color: 'text-purple-400' },
+    { label: 'Competitors', value: data?.competition_analysis?.length || 0, icon: TrendingUp, color: 'text-pink-400' },
   ] : [
     { label: 'Overall Score', value: `${overallScore}/100`, icon: TrendingUp, color: 'text-indigo-400' },
     { label: 'Traffic Estimate', value: (traffic_estimate || 0).toLocaleString(), icon: Globe, color: 'text-emerald-400' },
     { label: 'Keywords', value: keywords?.length || 0, icon: Zap, color: 'text-purple-400' },
-    { label: 'Competitors', value: serp_landscape?.length || 0, icon: BarChart3, color: 'text-pink-400' },
+    { label: 'Competitors', value: serp_landscape?.length || 0, icon: BarChart, color: 'text-pink-400' },
   ];
 
-  // ============ SCORE BREAKDOWN ============
   const scoreBreakdown = isProduct ? [
     { category: 'Market Demand', score: data?.marketScore || 60 },
     { category: 'Competition', score: data?.competitionScore || 55 },
@@ -243,7 +241,6 @@ export default function ReportDashboard() {
     { category: 'Security', score: data?.securityScore || 0 },
   ];
 
-  // ============ KEYWORD INTENT PIE ============
   const intentCounts: Record<string, number> = {};
   keywords?.forEach((kw: any) => {
     const intent = kw.intent || 'informational';
@@ -358,17 +355,16 @@ export default function ReportDashboard() {
                   ))}
                 </div>
 
-                {/* ============ PRODUCT REPORT SECTIONS ============ */}
+                {/* Product Report Sections */}
                 {isProduct && (
                   <>
-                    {/* Financial Model */}
-                    {financialModel?.length > 0 && (
+                    {data?.financial_model?.length > 0 && (
                       <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl mb-6">
                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                           <DollarSign size={18} className="text-emerald-400" /> Financial Model
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          {financialModel.slice(0, 3).map((item: any, i: number) => (
+                          {data.financial_model.slice(0, 3).map((item: any, i: number) => (
                             <div key={i} className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
                               <p className="font-semibold text-emerald-400">{item.tier_name || item.plan || `Tier ${i + 1}`}</p>
                               <p className="text-2xl font-bold mt-1">{item.price_sar || item.price || 'N/A'}</p>
@@ -379,14 +375,13 @@ export default function ReportDashboard() {
                       </div>
                     )}
 
-                    {/* Consumer Personas */}
-                    {consumerPersona?.length > 0 && (
+                    {data?.consumer_persona?.length > 0 && (
                       <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl mb-6">
                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                           <Users size={18} className="text-purple-400" /> Consumer Personas
                         </h3>
                         <div className="space-y-4">
-                          {consumerPersona.slice(0, 3).map((persona: any, i: number) => (
+                          {data.consumer_persona.slice(0, 3).map((persona: any, i: number) => (
                             <div key={i} className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
                               <p className="font-semibold text-purple-400">Persona #{i + 1}</p>
                               <p className="text-sm mt-1"><span className="text-neutral-400">Demographics:</span> {persona.demographics || 'N/A'}</p>
@@ -398,28 +393,13 @@ export default function ReportDashboard() {
                       </div>
                     )}
 
-                    {/* Competition Analysis */}
-                    {competitionAnalysis?.length > 0 && (
+                    {data?.competition_analysis?.length > 0 && (
                       <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl mb-6">
                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                           <TrendingUp size={18} className="text-pink-400" /> Competition Analysis
                         </h3>
                         <div className="space-y-2">
-                          {competitionAnalysis.slice(0, 5).map((item: any, i: number) => (
-                            <p key={i} className="text-sm text-neutral-300 p-3 rounded-lg bg-white/[0.02]">{item}</p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Launch Plan */}
-                    {launchPlan?.length > 0 && (
-                      <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl mb-6">
-                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                          <Target size={18} className="text-indigo-400" /> 30-60-90 Day Launch Plan
-                        </h3>
-                        <div className="space-y-2">
-                          {launchPlan.slice(0, 3).map((item: any, i: number) => (
+                          {data.competition_analysis.slice(0, 5).map((item: any, i: number) => (
                             <p key={i} className="text-sm text-neutral-300 p-3 rounded-lg bg-white/[0.02]">{item}</p>
                           ))}
                         </div>
@@ -428,23 +408,9 @@ export default function ReportDashboard() {
                   </>
                 )}
 
-                {/* ============ CHARTS (Both types) ============ */}
+                {/* Charts */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                  {/* Trend Chart */}
-                  <div id="trend-chart" className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl relative group">
-                    <button onClick={() => {
-                      const el = document.getElementById('trend-chart');
-                      if (el) {
-                        html2canvas(el, { scale: 2 }).then(canvas => {
-                          const link = document.createElement('a');
-                          link.download = 'trend-chart.png';
-                          link.href = canvas.toDataURL('image/png');
-                          link.click();
-                        });
-                      }
-                    }} className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg bg-white/10 hover:bg-white/20">
-                      <Camera size={16} />
-                    </button>
+                  <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
                     <h3 className="text-lg font-bold mb-4">12-Month Trend</h3>
                     <ResponsiveContainer width="100%" height={250}>
                       <AreaChart data={trendData}>
@@ -463,7 +429,6 @@ export default function ReportDashboard() {
                     </ResponsiveContainer>
                   </div>
 
-                  {/* Forecast */}
                   <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
                     <h3 className="text-lg font-bold mb-4">Traffic Forecast</h3>
                     <ResponsiveContainer width="100%" height={250}>
@@ -477,23 +442,21 @@ export default function ReportDashboard() {
                     </ResponsiveContainer>
                   </div>
 
-                  {/* Keywords Bar (SEO only) */}
                   {!isProduct && keywords?.length > 0 && (
                     <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
                       <h3 className="text-lg font-bold mb-4">Top Keywords</h3>
                       <ResponsiveContainer width="100%" height={250}>
-                        <BarChart data={keywords.slice(0, 10)}>
+                        <RechartsBarChart data={keywords.slice(0, 10)}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                           <XAxis dataKey="keyword" angle={-45} textAnchor="end" height={80} stroke="#ffffff50" />
                           <YAxis stroke="#ffffff50" />
                           <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }} />
                           <Bar dataKey="volume" fill="#8b5cf6" />
-                        </BarChart>
+                        </RechartsBarChart>
                       </ResponsiveContainer>
                     </div>
                   )}
 
-                  {/* Intent Pie (SEO only) */}
                   {!isProduct && pieData.length > 0 && (
                     <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
                       <h3 className="text-lg font-bold mb-4">Keyword Intent</h3>
@@ -509,7 +472,6 @@ export default function ReportDashboard() {
                     </div>
                   )}
 
-                  {/* Radar */}
                   <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
                     <h3 className="text-lg font-bold mb-4">{isProduct ? 'Product Viability' : 'Technical Breakdown'}</h3>
                     <ResponsiveContainer width="100%" height={250}>
@@ -524,7 +486,7 @@ export default function ReportDashboard() {
                   </div>
                 </div>
 
-                {/* SERP Table (SEO only) */}
+                {/* SERP Table */}
                 {!isProduct && serp_landscape?.length > 0 && (
                   <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
                     <h3 className="text-lg font-bold mb-4">Competitor SERP Landscape</h3>
@@ -577,11 +539,19 @@ export default function ReportDashboard() {
                     <textarea value={emailBody} onChange={(e) => setEmailBody(e.target.value)} rows={5} className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:outline-none focus:border-indigo-500 resize-none" />
                   </div>
                   <div>
-                    <label className="block text-sm text-neutral-400 mb-2">Attachment</label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" checked={attachments.includes('markdown')} onChange={() => setAttachments(prev => prev.includes('markdown') ? prev.filter(a => a !== 'markdown') : [...prev, 'markdown'])} className="accent-indigo-500" />
-                      <span>Markdown Report (.md)</span>
+                    <label className="block text-sm text-neutral-400 mb-2 flex items-center gap-2">
+                      <Paperclip size={14} /> Attachments
                     </label>
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={attachments.includes('markdown')} onChange={() => setAttachments(prev => prev.includes('markdown') ? prev.filter(a => a !== 'markdown') : [...prev, 'markdown'])} className="accent-indigo-500" />
+                        <span>Markdown Report (.md)</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={attachments.includes('pdf')} onChange={() => setAttachments(prev => prev.includes('pdf') ? prev.filter(a => a !== 'pdf') : [...prev, 'pdf'])} className="accent-indigo-500" />
+                        <span>Dashboard Snapshot (.png)</span>
+                      </label>
+                    </div>
                   </div>
                   <button onClick={handleSendEmail} disabled={sending} className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
                     <Send size={16} /> {sending ? 'Sending...' : 'Send Email'}
@@ -609,9 +579,7 @@ export default function ReportDashboard() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm text-neutral-400 mb-1 flex items-center gap-2">
-                      <Lock size={14} /> Password (optional)
-                    </label>
+                    <label className="block text-sm text-neutral-400 mb-1">Password (optional)</label>
                     <input type="password" value={sharePassword} onChange={(e) => setSharePassword(e.target.value)} placeholder="Optional password" className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:outline-none focus:border-indigo-500" />
                   </div>
                   {shareLink && (
@@ -631,80 +599,6 @@ export default function ReportDashboard() {
           </motion.div>
         </AnimatePresence>
       </div>
-
-      {/* Email Modal */}
-      <AnimatePresence>
-      {emailModal && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95 }} className="w-full max-w-md rounded-3xl bg-[#0F0F14] border border-white/10 p-8 shadow-2xl">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">Email Report</h2>
-              <button onClick={() => setEmailModal(false)} className="p-2 rounded-lg bg-white/5 hover:bg-white/10">
-                <X size={18} />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">Recipients</label>
-                <input type="text" value={emailTo} onChange={(e) => setEmailTo(e.target.value)} placeholder="client@example.com" className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:outline-none focus:border-indigo-500" />
-              </div>
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">Subject</label>
-                <input type="text" value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:outline-none focus:border-indigo-500" />
-              </div>
-              <div className="flex gap-3">
-                <button onClick={handleSendEmail} disabled={sending} className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
-                  <Send size={16} /> {sending ? 'Sending...' : 'Send'}
-                </button>
-                <button onClick={() => setEmailModal(false)} className="px-4 py-3 rounded-xl bg-white/10 border border-white/20 hover:bg-white/20">Cancel</button>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-      </AnimatePresence>
-
-      {/* Share Modal */}
-      <AnimatePresence>
-      {shareModal && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95 }} className="w-full max-w-md rounded-3xl bg-[#0F0F14] border border-white/10 p-8 shadow-2xl">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">Share Report</h2>
-              <button onClick={() => setShareModal(false)} className="p-2 rounded-lg bg-white/5 hover:bg-white/10">
-                <X size={18} />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">Expiry</label>
-                <select value={shareExpiry} onChange={(e) => setShareExpiry(Number(e.target.value))} className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:outline-none focus:border-indigo-500">
-                  <option value={24}>24 hours</option>
-                  <option value={72}>3 days</option>
-                  <option value={168}>7 days</option>
-                  <option value={720}>30 days</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">Password (optional)</label>
-                <input type="password" value={sharePassword} onChange={(e) => setSharePassword(e.target.value)} placeholder="Optional password" className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:outline-none focus:border-indigo-500" />
-              </div>
-              {shareLink && (
-                <div className="bg-white/5 border border-white/10 rounded-lg p-3 flex items-center justify-between">
-                  <span className="text-sm truncate">{shareLink}</span>
-                  <button onClick={() => { navigator.clipboard.writeText(shareLink); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="p-2 rounded-lg bg-white/10 hover:bg-white/20 flex-shrink-0">
-                    {copied ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
-                  </button>
-                </div>
-              )}
-              <button onClick={handleGenerateShareLink} className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 font-semibold flex items-center justify-center gap-2">
-                <Share2 size={16} /> Generate Link
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-      </AnimatePresence>
     </main>
   );
 }
