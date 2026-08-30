@@ -122,11 +122,13 @@ export default function HistoryPage() {
     } finally { setIsDeleting(false); }
   };
 
+  // ✅ Corrected filtering logic for technical-seo
   const filteredReports = reports
     .filter((r) => {
-      if (filterType === 'technical-seo' && r.type !== 'seo' && !r.data?.subtype) return false;
-      if (filterType === 'technical-seo' && r.type === 'seo' && r.data?.subtype !== 'technical') return false;
-      if (filterType !== 'all' && filterType !== 'technical-seo' && r.type !== filterType) return false;
+      if (filterType === 'technical-seo') {
+        return r.type === 'seo' && r.data?.subtype === 'technical';
+      }
+      if (filterType !== 'all' && r.type !== filterType) return false;
       if (searchQuery && !r.niche.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       return true;
     })
@@ -135,6 +137,7 @@ export default function HistoryPage() {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
+  // ✅ Corrected counts
   const totalReports = reports.length;
   const seoCount = reports.filter((r) => r.type === 'seo' && !r.data?.subtype).length;
   const productCount = reports.filter((r) => r.type === 'product').length;
@@ -153,7 +156,7 @@ export default function HistoryPage() {
     <main className="min-h-screen bg-[#0A0A0F] text-white font-['Inter'] relative overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-br from-indigo-600/20 via-purple-600/10 to-transparent blur-3xl pointer-events-none" />
 
-      {/* 🧭 GLOBAL NAVBAR */}
+      {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
@@ -197,13 +200,13 @@ export default function HistoryPage() {
           </button>
         </div>
 
-        {/* KPI Cards */}
+        {/* KPI Cards with correct counts */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           {[
             { label: 'Total Reports', value: totalReports, color: 'from-indigo-500 to-purple-600', icon: LayoutDashboard, barColor: 'bg-indigo-500', width: '100%' },
-            { label: 'SEO Reports', value: seoCount, color: 'from-blue-500 to-indigo-600', icon: TrendingUp, barColor: 'bg-blue-500', width: '75%' },
-            { label: 'Product Reports', value: productCount, color: 'from-emerald-500 to-green-600', icon: FileText, barColor: 'bg-emerald-500', width: '60%' },
-            { label: 'Technical SEO', value: technicalCount, color: 'from-orange-500 to-red-600', icon: Gauge, barColor: 'bg-orange-500', width: '45%' },
+            { label: 'SEO Reports', value: seoCount, color: 'from-blue-500 to-indigo-600', icon: TrendingUp, barColor: 'bg-blue-500', width: `${(seoCount / totalReports) * 100}%` },
+            { label: 'Product Reports', value: productCount, color: 'from-emerald-500 to-green-600', icon: FileText, barColor: 'bg-emerald-500', width: `${(productCount / totalReports) * 100}%` },
+            { label: 'Technical SEO', value: technicalCount, color: 'from-orange-500 to-red-600', icon: Gauge, barColor: 'bg-orange-500', width: `${(technicalCount / totalReports) * 100}%` },
           ].map((item, i) => (
             <motion.div
               key={i}
@@ -322,7 +325,7 @@ export default function HistoryPage() {
                       </p>
                       <span className="text-neutral-700">•</span>
                       <p className="text-xs text-neutral-500">
-                        {countryFlags[r.country] || '🌍'} {r.country.toUpperCase()}
+                        {countryFlags[r.country] || '🌍'} {r.country?.toUpperCase()}
                       </p>
                     </div>
                     <p className="text-[11px] text-neutral-600 mt-1 flex items-center gap-1">
