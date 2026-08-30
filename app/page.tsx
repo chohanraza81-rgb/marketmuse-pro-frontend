@@ -56,7 +56,7 @@ export default function HomePage() {
             <span className="font-bold text-xl tracking-tight whitespace-nowrap">Muse<span className="text-indigo-400">PRO</span></span>
           </Link>
 
-          {/* Center Navigation Links (without History) */}
+          {/* Center Navigation Links */}
           <div className="hidden lg:flex items-center gap-1">
             <Link href="/dashboard" className="px-3 py-2 text-sm text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5 rounded-lg hover:bg-white/5 whitespace-nowrap">
               <LayoutDashboard size={14} />
@@ -78,13 +78,11 @@ export default function HomePage() {
 
           {/* Right Side: History, Compare, Status, Agency, Get Started */}
           <div className="flex items-center gap-3 flex-shrink-0">
-            {/* History Link */}
             <Link href="/history" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-white transition-colors rounded-lg hover:bg-white/5 whitespace-nowrap">
               <History size={14} />
               <span>History</span>
             </Link>
 
-            {/* Compare Link */}
             <Link href="/compare" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-white transition-colors rounded-lg hover:bg-white/5 whitespace-nowrap">
               <GitCompare size={14} />
               <span>Compare</span>
@@ -106,8 +104,8 @@ export default function HomePage() {
               </span>
             </div>
 
-            {/* Agency Link */}
-            <Link href="/agency-settings" className="hidden xl:flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm font-medium whitespace-nowrap">
+            {/* Agency Link - Re-added and visible */}
+            <Link href="/agency-settings" className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm font-medium whitespace-nowrap">
               <Settings size={14} />
               <span>Agency</span>
             </Link>
@@ -120,7 +118,7 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* Hero Section */}
+      {/* Rest of the page remains unchanged */}
       <section className="relative max-w-7xl mx-auto px-6 pt-24 pb-16 text-center z-10">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -173,7 +171,6 @@ export default function HomePage() {
         </motion.div>
       </section>
 
-      {/* Features Section */}
       <section className="max-w-7xl mx-auto px-6 pb-20 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
@@ -250,7 +247,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section className="max-w-7xl mx-auto px-6 pb-20 relative z-10">
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
@@ -266,7 +262,6 @@ export default function HomePage() {
         </motion.div>
       </section>
 
-      {/* Footer */}
       <footer className="border-t border-white/5 py-8">
         <div className="max-w-7xl mx-auto px-6 text-center">
           <p className="text-xs text-neutral-600">
