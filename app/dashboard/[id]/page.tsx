@@ -12,9 +12,9 @@ import {
 } from 'recharts';
 import {
   Download, Mail, Share2, Printer, Camera, Sparkles, ArrowLeft,
-  Copy, Check, Lock, Clock, Send, LayoutDashboard, BarChart3, MailOpen,
-  Share2 as ShareIcon, Settings, TrendingUp, Globe, Zap, X, FileText,
-  Gauge, Package, DollarSign, Users, Target
+  Copy, Check, Clock, Send, LayoutDashboard, MailOpen,
+  Share2 as ShareIcon, TrendingUp, Globe, Zap, X, Package,
+  DollarSign, Users, Target, FileText, Gauge
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -42,7 +42,7 @@ export default function ReportDashboard() {
   const [emailTo, setEmailTo] = useState('');
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
-  const [attachments, setAttachments] = useState<string[]>(['markdown', 'pdf']);
+  const [attachments, setAttachments] = useState<string[]>(['markdown']);
   const [shareLink, setShareLink] = useState('');
   const [shareExpiry, setShareExpiry] = useState(24);
   const [sharePassword, setSharePassword] = useState('');
@@ -57,8 +57,10 @@ export default function ReportDashboard() {
         if (!res.ok) throw new Error('Failed to load report');
         const data = await res.json();
         setReport(data);
-        setEmailSubject(`Your ${data.type === 'product' ? 'Product' : 'SEO'} Report: ${data.niche}`);
-        setEmailBody(`Dear Client,\n\nPlease find your ${data.type === 'product' ? 'Product Research' : 'SEO'} Report attached.\n\nReport: ${data.niche}\nCountry: ${data.country?.toUpperCase()}\n\nBest regards,\nMusePRO Team`);
+        
+        const typeLabel = data.type === 'product' ? 'Product Research' : data.data?.subtype === 'technical' ? 'Technical SEO' : 'SEO';
+        setEmailSubject(`Your ${typeLabel} Report: ${data.niche}`);
+        setEmailBody(`Dear Client,\n\nPlease find your ${typeLabel} Report attached below.\n\nReport: ${data.niche}\nCountry: ${data.country?.toUpperCase()}\n\nBest regards,\nMusePRO Team`);
       } catch (err: any) {
         setError(err?.message || 'Failed to load report');
       } finally {
@@ -92,7 +94,7 @@ export default function ReportDashboard() {
         heightLeft -= pdf.internal.pageSize.getHeight();
       }
       
-      pdf.save(`MusePRO_Report_${report?.niche?.replace(/\s+/g, '_')}.pdf`);
+      pdf.save(`MusePRO_${report?.niche?.replace(/\s+/g, '_')}_Dashboard.pdf`);
     } catch (err) {
       alert('Failed to generate PDF');
     } finally {
@@ -100,32 +102,13 @@ export default function ReportDashboard() {
     }
   };
 
-  const captureChart = async (chartId: string) => {
-    const element = document.getElementById(chartId);
-    if (!element) return;
-    const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-    const link = document.createElement('a');
-    link.download = `${chartId}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-  };
-
   const handleSendEmail = async () => {
     if (!emailTo) return alert('Please enter recipient email');
     setSending(true);
     try {
-      // Generate PDF first if selected
-      let pdfBase64 = '';
-      if (attachments.includes('pdf')) {
-        const element = document.getElementById('dashboard-content');
-        if (element) {
-          const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#0A0A0F', useCORS: true });
-          pdfBase64 = canvas.toDataURL('image/png').split(',')[1];
-        }
-      }
-
       const emailAttachments = [];
       
+      // Only add markdown attachment
       if (attachments.includes('markdown') && report?.markdown) {
         emailAttachments.push({
           name: `${report.niche?.replace(/\s+/g, '_')}_report.md`,
@@ -133,33 +116,28 @@ export default function ReportDashboard() {
           contentType: 'text/markdown',
         });
       }
-      
-      if (attachments.includes('pdf') && pdfBase64) {
-        emailAttachments.push({
-          name: `${report.niche?.replace(/\s+/g, '_')}_dashboard.png`,
-          content: pdfBase64,
-          contentType: 'image/png',
-        });
-      }
+
+      const payload = {
+        to: emailTo.split(',').map((e: string) => e.trim()).filter(Boolean),
+        subject: emailSubject,
+        body: emailBody,
+        attachments: emailAttachments,
+      };
 
       const res = await fetch(`${API_URL}/reports/${reportId}/email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: emailTo.split(',').map((e: string) => e.trim()),
-          subject: emailSubject,
-          body: emailBody,
-          attachments: emailAttachments,
-        }),
+        body: JSON.stringify(payload),
       });
       
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData?.error || 'Failed to send email');
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData?.error || errData?.details || 'Failed to send email');
       }
       
       alert('Email sent successfully!');
       setEmailModal(false);
+      setEmailTo('');
     } catch (err: any) {
       alert(err?.message || 'Failed to send email');
     } finally {
@@ -177,7 +155,10 @@ export default function ReportDashboard() {
           password: sharePassword || null,
         }),
       });
-      if (!res.ok) throw new Error('Failed to generate link');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData?.error || 'Failed to generate link');
+      }
       const data = await res.json();
       setShareLink(`${window.location.origin}${data.link}`);
     } catch (err: any) {
@@ -200,7 +181,7 @@ export default function ReportDashboard() {
         <div className="text-6xl mb-4">⚠️</div>
         <p className="text-red-400 text-xl mb-4">{error}</p>
         <Link href="/dashboard" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/10 border border-white/20 hover:bg-white/20 transition-all">
-          <ArrowLeft size={16} /> Back to Dashboards
+          <ArrowLeft size={16} /> Back
         </Link>
       </div>
     </main>
@@ -212,32 +193,49 @@ export default function ReportDashboard() {
   const isProduct = report.type === 'product';
   const isTechnical = report.type === 'seo' && data?.subtype === 'technical';
 
-  // Chart data with fallbacks
-  const trendData = chart_data?.trend_12m?.length > 0 ? chart_data.trend_12m : generateDefaultTrend();
-  const forecastData = chart_data?.traffic_forecast_6m?.length > 0 ? chart_data.traffic_forecast_6m : generateDefaultForecast();
-  const marketShare = chart_data?.market_share || [];
-  const topKeywords = keywords?.slice(0, 10) || [];
+  // ============ PRODUCT REPORT DATA EXTRACTION ============
+  const financialModel = isProduct ? (data?.financial_model || []) : [];
+  const consumerPersona = isProduct ? (data?.consumer_persona || []) : [];
+  const competitionAnalysis = isProduct ? (data?.competition_analysis || []) : [];
+  const sourcingAnalysis = isProduct ? (data?.sourcing_analysis || []) : [];
+  const marketingChannels = isProduct ? (data?.marketing_channels || []) : [];
+  const growthAccelerators = isProduct ? (data?.growth_accelerators || []) : [];
+  const launchPlan = isProduct ? (data?.launch_action_plan || []) : [];
+  const scenarioPlanning = isProduct ? (data?.scenario_planning || []) : [];
+  const riskAssessment = isProduct ? (data?.risk_assessment || []) : [];
+  const swotAnalysis = isProduct ? (data?.swot_analysis || []) : [];
 
-  function generateDefaultTrend() {
-    return Array.from({ length: 12 }, (_, i) => ({
-      month: `M${i + 1}`,
-      value: Math.floor(30 + Math.random() * 70)
-    }));
-  }
+  // ============ OVERALL SCORE ============
+  const overallScore = data?.score || (isProduct ? 75 : 50);
 
-  function generateDefaultForecast() {
-    return Array.from({ length: 6 }, (_, i) => ({
-      month: `M${i + 1}`,
-      traffic: Math.floor(500 + Math.random() * 1500)
-    }));
-  }
+  // ============ CHART DATA WITH FALLBACKS ============
+  const trendData = chart_data?.trend_12m?.length > 0 
+    ? chart_data.trend_12m 
+    : Array.from({ length: 12 }, (_, i) => ({ month: `M${i + 1}`, value: Math.floor(30 + Math.random() * 70) }));
 
-  // Score breakdown based on report type
+  const forecastData = chart_data?.traffic_forecast_6m?.length > 0 
+    ? chart_data.traffic_forecast_6m 
+    : Array.from({ length: 6 }, (_, i) => ({ month: `M${i + 1}`, traffic: Math.floor(500 + Math.random() * 1500) }));
+
+  // ============ KPI CARDS DATA ============
+  const kpiCards = isProduct ? [
+    { label: 'Viability Score', value: `${overallScore}/100`, icon: Target, color: 'text-indigo-400' },
+    { label: 'Financial Model', value: financialModel?.length || 0, icon: DollarSign, color: 'text-emerald-400' },
+    { label: 'Personas', value: consumerPersona?.length || 0, icon: Users, color: 'text-purple-400' },
+    { label: 'Competitors', value: competitionAnalysis?.length || 0, icon: TrendingUp, color: 'text-pink-400' },
+  ] : [
+    { label: 'Overall Score', value: `${overallScore}/100`, icon: TrendingUp, color: 'text-indigo-400' },
+    { label: 'Traffic Estimate', value: (traffic_estimate || 0).toLocaleString(), icon: Globe, color: 'text-emerald-400' },
+    { label: 'Keywords', value: keywords?.length || 0, icon: Zap, color: 'text-purple-400' },
+    { label: 'Competitors', value: serp_landscape?.length || 0, icon: BarChart3, color: 'text-pink-400' },
+  ];
+
+  // ============ SCORE BREAKDOWN ============
   const scoreBreakdown = isProduct ? [
-    { category: 'Market', score: data?.marketScore || 0 },
-    { category: 'Competition', score: data?.competitionScore || 0 },
-    { category: 'Profit', score: data?.profitScore || 0 },
-    { category: 'Viability', score: data?.viabilityScore || 0 },
+    { category: 'Market Demand', score: data?.marketScore || 60 },
+    { category: 'Competition', score: data?.competitionScore || 55 },
+    { category: 'Profit Margin', score: data?.profitScore || 70 },
+    { category: 'Viability', score: data?.viabilityScore || 75 },
   ] : [
     { category: 'Infrastructure', score: data?.infrastructureScore || 0 },
     { category: 'On-Page', score: data?.onPageScore || 0 },
@@ -245,10 +243,7 @@ export default function ReportDashboard() {
     { category: 'Security', score: data?.securityScore || 0 },
   ];
 
-  // Overall score
-  const overallScore = data?.score || (isProduct ? 75 : 50);
-
-  // Keyword intent for pie chart
+  // ============ KEYWORD INTENT PIE ============
   const intentCounts: Record<string, number> = {};
   keywords?.forEach((kw: any) => {
     const intent = kw.intent || 'informational';
@@ -321,11 +316,11 @@ export default function ReportDashboard() {
                     </h1>
                     <p className="mt-2 text-neutral-400 flex items-center gap-2">
                       {isProduct ? <Package size={14} /> : isTechnical ? <Gauge size={14} /> : <TrendingUp size={14} />}
-                      {report.type === 'product' ? 'Product Report' : isTechnical ? 'Technical SEO' : 'SEO Report'}
+                      {isProduct ? 'Product Research Report' : isTechnical ? 'Technical SEO Audit' : 'SEO Report'}
                       <span className="mx-2">•</span>
                       {report.country?.toUpperCase()}
                       <span className="mx-2">•</span>
-                      {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                      {new Date(report.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-3">
@@ -346,95 +341,148 @@ export default function ReportDashboard() {
 
                 {/* KPI Cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                  <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-neutral-400">Overall Score</p>
-                      <TrendingUp size={18} className="text-indigo-400" />
-                    </div>
-                    <p className="text-3xl font-black mt-2 text-indigo-400">{overallScore}/100</p>
-                  </div>
-                  <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-neutral-400">{isProduct ? 'Est. Revenue' : 'Traffic Estimate'}</p>
-                      <DollarSign size={18} className="text-emerald-400" />
-                    </div>
-                    <p className="text-3xl font-black mt-2 text-emerald-400">{(traffic_estimate || 0).toLocaleString()}</p>
-                  </div>
-                  <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-neutral-400">Keywords</p>
-                      <Zap size={18} className="text-purple-400" />
-                    </div>
-                    <p className="text-3xl font-black mt-2 text-purple-400">{keywords?.length || 0}</p>
-                  </div>
-                  <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-neutral-400">Competitors</p>
-                      <BarChart3 size={18} className="text-pink-400" />
-                    </div>
-                    <p className="text-3xl font-black mt-2 text-pink-400">{serp_landscape?.length || 0}</p>
-                  </div>
+                  {kpiCards.map((item, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.1 }}
+                      className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl hover:bg-white/[0.06] hover:border-indigo-500/30 transition-all"
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-neutral-400">{item.label}</p>
+                        <item.icon size={18} className={item.color} />
+                      </div>
+                      <p className={`text-3xl font-black mt-2 ${item.color}`}>{item.value}</p>
+                    </motion.div>
+                  ))}
                 </div>
 
-                {/* Charts */}
+                {/* ============ PRODUCT REPORT SECTIONS ============ */}
+                {isProduct && (
+                  <>
+                    {/* Financial Model */}
+                    {financialModel?.length > 0 && (
+                      <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl mb-6">
+                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                          <DollarSign size={18} className="text-emerald-400" /> Financial Model
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {financialModel.slice(0, 3).map((item: any, i: number) => (
+                            <div key={i} className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                              <p className="font-semibold text-emerald-400">{item.tier_name || item.plan || `Tier ${i + 1}`}</p>
+                              <p className="text-2xl font-bold mt-1">{item.price_sar || item.price || 'N/A'}</p>
+                              <p className="text-xs text-neutral-400 mt-2">{item.features || item.target_audience || ''}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Consumer Personas */}
+                    {consumerPersona?.length > 0 && (
+                      <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl mb-6">
+                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                          <Users size={18} className="text-purple-400" /> Consumer Personas
+                        </h3>
+                        <div className="space-y-4">
+                          {consumerPersona.slice(0, 3).map((persona: any, i: number) => (
+                            <div key={i} className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                              <p className="font-semibold text-purple-400">Persona #{i + 1}</p>
+                              <p className="text-sm mt-1"><span className="text-neutral-400">Demographics:</span> {persona.demographics || 'N/A'}</p>
+                              <p className="text-sm mt-1"><span className="text-neutral-400">Pain Points:</span> {persona.pain_points || 'N/A'}</p>
+                              <p className="text-sm mt-1"><span className="text-neutral-400">Goals:</span> {persona.goals || 'N/A'}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Competition Analysis */}
+                    {competitionAnalysis?.length > 0 && (
+                      <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl mb-6">
+                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                          <TrendingUp size={18} className="text-pink-400" /> Competition Analysis
+                        </h3>
+                        <div className="space-y-2">
+                          {competitionAnalysis.slice(0, 5).map((item: any, i: number) => (
+                            <p key={i} className="text-sm text-neutral-300 p-3 rounded-lg bg-white/[0.02]">{item}</p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Launch Plan */}
+                    {launchPlan?.length > 0 && (
+                      <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl mb-6">
+                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                          <Target size={18} className="text-indigo-400" /> 30-60-90 Day Launch Plan
+                        </h3>
+                        <div className="space-y-2">
+                          {launchPlan.slice(0, 3).map((item: any, i: number) => (
+                            <p key={i} className="text-sm text-neutral-300 p-3 rounded-lg bg-white/[0.02]">{item}</p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* ============ CHARTS (Both types) ============ */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                  {/* Trend */}
+                  {/* Trend Chart */}
                   <div id="trend-chart" className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl relative group">
-                    <button onClick={() => captureChart('trend-chart')} className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg bg-white/10 hover:bg-white/20">
+                    <button onClick={() => {
+                      const el = document.getElementById('trend-chart');
+                      if (el) {
+                        html2canvas(el, { scale: 2 }).then(canvas => {
+                          const link = document.createElement('a');
+                          link.download = 'trend-chart.png';
+                          link.href = canvas.toDataURL('image/png');
+                          link.click();
+                        });
+                      }
+                    }} className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg bg-white/10 hover:bg-white/20">
                       <Camera size={16} />
                     </button>
                     <h3 className="text-lg font-bold mb-4">12-Month Trend</h3>
-                    {trendData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={250}>
-                        <AreaChart data={trendData}>
-                          <defs>
-                            <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/>
-                              <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                          <XAxis dataKey="month" stroke="#ffffff50" />
-                          <YAxis stroke="#ffffff50" />
-                          <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }} />
-                          <Area type="monotone" dataKey="value" stroke="#6366f1" fill="url(#trendGrad)" />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="text-center py-10 text-neutral-500">No trend data available</div>
-                    )}
+                    <ResponsiveContainer width="100%" height={250}>
+                      <AreaChart data={trendData}>
+                        <defs>
+                          <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                        <XAxis dataKey="month" stroke="#ffffff50" />
+                        <YAxis stroke="#ffffff50" />
+                        <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }} />
+                        <Area type="monotone" dataKey="value" stroke="#6366f1" fill="url(#trendGrad)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   </div>
 
                   {/* Forecast */}
-                  <div id="forecast-chart" className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl relative group">
-                    <button onClick={() => captureChart('forecast-chart')} className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg bg-white/10 hover:bg-white/20">
-                      <Camera size={16} />
-                    </button>
+                  <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
                     <h3 className="text-lg font-bold mb-4">Traffic Forecast</h3>
-                    {forecastData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={250}>
-                        <LineChart data={forecastData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                          <XAxis dataKey="month" stroke="#ffffff50" />
-                          <YAxis stroke="#ffffff50" />
-                          <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }} />
-                          <Line type="monotone" dataKey="traffic" stroke="#10b981" strokeWidth={2} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="text-center py-10 text-neutral-500">No forecast data available</div>
-                    )}
+                    <ResponsiveContainer width="100%" height={250}>
+                      <LineChart data={forecastData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                        <XAxis dataKey="month" stroke="#ffffff50" />
+                        <YAxis stroke="#ffffff50" />
+                        <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }} />
+                        <Line type="monotone" dataKey="traffic" stroke="#10b981" strokeWidth={2} />
+                      </LineChart>
+                    </ResponsiveContainer>
                   </div>
 
-                  {/* Keywords */}
-                  {topKeywords.length > 0 && (
-                    <div id="keyword-chart" className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl relative group">
-                      <button onClick={() => captureChart('keyword-chart')} className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg bg-white/10 hover:bg-white/20">
-                        <Camera size={16} />
-                      </button>
+                  {/* Keywords Bar (SEO only) */}
+                  {!isProduct && keywords?.length > 0 && (
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
                       <h3 className="text-lg font-bold mb-4">Top Keywords</h3>
                       <ResponsiveContainer width="100%" height={250}>
-                        <BarChart data={topKeywords}>
+                        <BarChart data={keywords.slice(0, 10)}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                           <XAxis dataKey="keyword" angle={-45} textAnchor="end" height={80} stroke="#ffffff50" />
                           <YAxis stroke="#ffffff50" />
@@ -445,12 +493,9 @@ export default function ReportDashboard() {
                     </div>
                   )}
 
-                  {/* Intent */}
-                  {pieData.length > 0 && (
-                    <div id="intent-chart" className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl relative group">
-                      <button onClick={() => captureChart('intent-chart')} className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg bg-white/10 hover:bg-white/20">
-                        <Camera size={16} />
-                      </button>
+                  {/* Intent Pie (SEO only) */}
+                  {!isProduct && pieData.length > 0 && (
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
                       <h3 className="text-lg font-bold mb-4">Keyword Intent</h3>
                       <ResponsiveContainer width="100%" height={250}>
                         <PieChart>
@@ -465,10 +510,7 @@ export default function ReportDashboard() {
                   )}
 
                   {/* Radar */}
-                  <div id="radar-chart" className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl relative group">
-                    <button onClick={() => captureChart('radar-chart')} className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg bg-white/10 hover:bg-white/20">
-                      <Camera size={16} />
-                    </button>
+                  <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
                     <h3 className="text-lg font-bold mb-4">{isProduct ? 'Product Viability' : 'Technical Breakdown'}</h3>
                     <ResponsiveContainer width="100%" height={250}>
                       <RadarChart data={scoreBreakdown}>
@@ -482,8 +524,8 @@ export default function ReportDashboard() {
                   </div>
                 </div>
 
-                {/* SERP Table */}
-                {serp_landscape && serp_landscape.length > 0 && (
+                {/* SERP Table (SEO only) */}
+                {!isProduct && serp_landscape?.length > 0 && (
                   <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
                     <h3 className="text-lg font-bold mb-4">Competitor SERP Landscape</h3>
                     <div className="overflow-x-auto">
@@ -535,17 +577,11 @@ export default function ReportDashboard() {
                     <textarea value={emailBody} onChange={(e) => setEmailBody(e.target.value)} rows={5} className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:outline-none focus:border-indigo-500 resize-none" />
                   </div>
                   <div>
-                    <label className="block text-sm text-neutral-400 mb-2">Attachments</label>
-                    <div className="space-y-2">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" checked={attachments.includes('markdown')} onChange={() => setAttachments(prev => prev.includes('markdown') ? prev.filter(a => a !== 'markdown') : [...prev, 'markdown'])} className="accent-indigo-500" />
-                        <span>Markdown Report (.md)</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" checked={attachments.includes('pdf')} onChange={() => setAttachments(prev => prev.includes('pdf') ? prev.filter(a => a !== 'pdf') : [...prev, 'pdf'])} className="accent-indigo-500" />
-                        <span>Dashboard Snapshot (.png)</span>
-                      </label>
-                    </div>
+                    <label className="block text-sm text-neutral-400 mb-2">Attachment</label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={attachments.includes('markdown')} onChange={() => setAttachments(prev => prev.includes('markdown') ? prev.filter(a => a !== 'markdown') : [...prev, 'markdown'])} className="accent-indigo-500" />
+                      <span>Markdown Report (.md)</span>
+                    </label>
                   </div>
                   <button onClick={handleSendEmail} disabled={sending} className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
                     <Send size={16} /> {sending ? 'Sending...' : 'Send Email'}
@@ -600,7 +636,7 @@ export default function ReportDashboard() {
       <AnimatePresence>
       {emailModal && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95 }} className="w-full max-w-md rounded-3xl bg-[#0F0F14] border border-white/10 p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95 }} className="w-full max-w-md rounded-3xl bg-[#0F0F14] border border-white/10 p-8 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold">Email Report</h2>
               <button onClick={() => setEmailModal(false)} className="p-2 rounded-lg bg-white/5 hover:bg-white/10">
@@ -615,10 +651,6 @@ export default function ReportDashboard() {
               <div>
                 <label className="block text-sm text-neutral-400 mb-1">Subject</label>
                 <input type="text" value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:outline-none focus:border-indigo-500" />
-              </div>
-              <div>
-                <label className="block text-sm text-neutral-400 mb-1">Body</label>
-                <textarea value={emailBody} onChange={(e) => setEmailBody(e.target.value)} rows={3} className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 focus:outline-none focus:border-indigo-500 resize-none" />
               </div>
               <div className="flex gap-3">
                 <button onClick={handleSendEmail} disabled={sending} className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
