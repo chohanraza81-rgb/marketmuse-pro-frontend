@@ -4,16 +4,54 @@ import { motion } from 'framer-motion';
 import { 
   Sparkles, TrendingUp, BarChart3, Globe, FileText, 
   Settings, ArrowRight, Zap, ShieldCheck, Gauge, LayoutDashboard,
-  Mail, Share2, Download, Search, History, ChevronRight
+  Mail, Wifi, WifiOff, Loader2, ChevronRight
 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production.up.railway.app/api';
 
 export default function HomePage() {
+  const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+
+  useEffect(() => {
+    const checkAPI = async () => {
+      try {
+        const res = await fetch(`${API_URL}/health`, { 
+          method: 'GET',
+          signal: AbortSignal.timeout(5000)
+        });
+        if (res.ok) {
+          setApiStatus('online');
+        } else {
+          setApiStatus('offline');
+        }
+      } catch (err) {
+        setApiStatus('offline');
+      }
+    };
+
+    checkAPI();
+    const interval = setInterval(checkAPI, 30000); // Check every 30 seconds
+    
+    // Browser online/offline listeners
+    const handleOnline = () => checkAPI();
+    const handleOffline = () => setApiStatus('offline');
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   return (
     <main className="min-h-screen bg-[#0A0A0F] text-white font-['Inter'] relative overflow-hidden selection:bg-indigo-500 selection:text-white">
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-[500px] bg-indigo-600/20 blur-[120px] pointer-events-none" />
       
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-black/70 backdrop-blur-xl border-b border-white/5">
+      <nav className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
@@ -27,7 +65,7 @@ export default function HomePage() {
               <LayoutDashboard size={14} /> Dashboard
             </Link>
             <Link href="/history" className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5 rounded-lg hover:bg-white/5">
-              <History size={14} /> History
+              <FileText size={14} /> History
             </Link>
             <Link href="/product-research" className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors flex items-center gap-1.5 rounded-lg hover:bg-white/5">
               <BarChart3 size={14} /> Product
@@ -41,6 +79,22 @@ export default function HomePage() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* ACTUAL API STATUS INDICATOR */}
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border transition-all ${
+              apiStatus === 'online' 
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                : apiStatus === 'offline'
+                  ? 'bg-red-500/10 text-red-400 border-red-500/30 animate-pulse'
+                  : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
+            }`}>
+              {apiStatus === 'checking' && <Loader2 size={14} className="animate-spin" />}
+              {apiStatus === 'online' && <Wifi size={14} />}
+              {apiStatus === 'offline' && <WifiOff size={14} />}
+              <span>
+                {apiStatus === 'online' ? 'System Online' : apiStatus === 'offline' ? 'System Offline' : 'Checking...'}
+              </span>
+            </div>
+
             <Link href="/agency-settings" className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm font-medium">
               <Settings size={16} /> Agency
             </Link>
@@ -67,7 +121,7 @@ export default function HomePage() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="text-6xl md:text-7xl font-black tracking-tight leading-[1.05] bg-gradient-to-b from-white to-neutral-400 bg-clip-text text-transparent"
+          className="text-5xl md:text-7xl font-black tracking-tight leading-[1.05] bg-gradient-to-b from-white to-neutral-400 bg-clip-text text-transparent"
         >
           Research markets.<br />
           <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Dominate search.</span>
@@ -169,7 +223,7 @@ export default function HomePage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: item.delay, duration: 0.5 }}
-              className={`p-8 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-xl hover:bg-white/[0.07] ${item.hoverBorder} transition-all duration-300 group cursor-pointer`}
+              className={`p-8 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-xl hover:bg-white/[0.07] ${item.hoverBorder} transition-all duration-300 group`}
             >
               <div className={`w-12 h-12 rounded-xl ${item.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
                 <item.icon size={24} className={item.iconColor} />
