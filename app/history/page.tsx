@@ -122,11 +122,14 @@ export default function HistoryPage() {
     } finally { setIsDeleting(false); }
   };
 
-  // ✅ Corrected filtering logic for technical-seo
+  // ✅ Helper function to identify technical SEO reports
+  const isTechnicalSEO = (r: any) => 
+    r.type === 'seo' && (r.data?.subtype === 'technical' || r.data?.subtype === 'technical-business');
+
   const filteredReports = reports
     .filter((r) => {
       if (filterType === 'technical-seo') {
-        return r.type === 'seo' && r.data?.subtype === 'technical';
+        return isTechnicalSEO(r);
       }
       if (filterType !== 'all' && r.type !== filterType) return false;
       if (searchQuery && !r.niche.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -137,11 +140,10 @@ export default function HistoryPage() {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
-  // ✅ Corrected counts
   const totalReports = reports.length;
-  const seoCount = reports.filter((r) => r.type === 'seo' && !r.data?.subtype).length;
+  const seoCount = reports.filter((r) => r.type === 'seo' && !isTechnicalSEO(r)).length;
   const productCount = reports.filter((r) => r.type === 'product').length;
-  const technicalCount = reports.filter((r) => r.type === 'seo' && r.data?.subtype === 'technical').length;
+  const technicalCount = reports.filter(isTechnicalSEO).length;
 
   if (loading) return (
     <main className="min-h-screen bg-[#0A0A0F] flex items-center justify-center">
@@ -302,7 +304,7 @@ export default function HistoryPage() {
                 <div className={`absolute left-0 top-0 h-full w-1 ${
                   r.type === 'product' 
                     ? 'bg-gradient-to-b from-emerald-500 to-green-600' 
-                    : r.data?.subtype === 'technical'
+                    : isTechnicalSEO(r)
                       ? 'bg-gradient-to-b from-orange-500 to-red-600'
                       : 'bg-gradient-to-b from-indigo-500 to-purple-600'
                 }`} />
@@ -311,17 +313,17 @@ export default function HistoryPage() {
                   <div className={`p-3 rounded-xl ${
                     r.type === 'product' 
                       ? 'bg-emerald-500/10 text-emerald-400' 
-                      : r.data?.subtype === 'technical'
+                      : isTechnicalSEO(r)
                         ? 'bg-orange-500/10 text-orange-400'
                         : 'bg-indigo-500/10 text-indigo-400'
                   }`}>
-                    {r.type === 'product' ? <FileText size={20} /> : r.data?.subtype === 'technical' ? <Gauge size={20} /> : <TrendingUp size={20} />}
+                    {r.type === 'product' ? <FileText size={20} /> : isTechnicalSEO(r) ? <Gauge size={20} /> : <TrendingUp size={20} />}
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg group-hover:text-white transition-colors">{r.niche}</h3>
                     <div className="flex items-center gap-2 mt-1">
                       <p className="text-xs text-neutral-500 uppercase tracking-wider">
-                        {r.type === 'product' ? 'Product' : r.data?.subtype === 'technical' ? 'Technical SEO' : 'SEO'}
+                        {r.type === 'product' ? 'Product' : isTechnicalSEO(r) ? 'Technical SEO' : 'SEO'}
                       </p>
                       <span className="text-neutral-700">•</span>
                       <p className="text-xs text-neutral-500">
