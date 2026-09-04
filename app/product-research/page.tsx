@@ -1,9 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { 
-  Package, Globe, Sparkles, Loader2, ArrowRight,
+import {
+  Package, Sparkles, Loader2, ArrowRight,
   LayoutDashboard, History, Settings, BarChart3, TrendingUp, Zap
 } from 'lucide-react';
 import Link from 'next/link';
@@ -38,6 +38,7 @@ export default function ProductResearchPage() {
   const [country, setCountry] = useState('us');
   const [loading, setLoading] = useState(false);
   const [progressStep, setProgressStep] = useState(0);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (!loading) return;
@@ -49,10 +50,14 @@ export default function ProductResearchPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     if (!niche.trim()) {
-      toast.error('Please enter a product or niche.');
+      toast.error('Please enter a product or niche.', {
+        description: 'This field is required.',
+      });
       return;
     }
+    submittingRef.current = true;
     setLoading(true);
     setProgressStep(0);
     try {
@@ -61,21 +66,32 @@ export default function ProductResearchPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ niche: niche.trim(), country }),
       });
-      if (!res.ok) throw new Error('Failed to generate report');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to generate report');
+      }
       const data = await res.json();
-      toast.success('Report generated successfully!');
-      setTimeout(() => router.push(`/dashboard/${data.id}`), 1000);
+      const reportId = data.id || data._id;
+      if (!reportId) throw new Error('Invalid report response');
+      toast.success('Report Generated Successfully', {
+        description: 'Redirecting to your dashboard...',
+      });
+      setTimeout(() => {
+        router.push(`/dashboard/${reportId}`);
+      }, 800);
     } catch (err: any) {
-      toast.error(err.message || 'Something went wrong');
-    } finally {
+      toast.error('Generation Failed', {
+        description: err.message || 'Something went wrong. Please try again.',
+      });
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 
   return (
     <main className="min-h-screen bg-[#0A0A0F] text-white font-['Inter'] relative overflow-hidden">
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[600px] bg-emerald-600/20 blur-[130px] pointer-events-none" />
-      
+
       <nav className="sticky top-0 z-50 bg-black/70 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2 flex-shrink-0">
@@ -189,6 +205,9 @@ export default function ProductResearchPage() {
                 </>
               )}
             </button>
+            <p className="text-center text-xs text-neutral-500">
+              Reports typically take 30-60 seconds to generate.
+            </p>
           </div>
         </motion.form>
       </section>
