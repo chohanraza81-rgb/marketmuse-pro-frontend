@@ -11,6 +11,14 @@ import {
   Download,
   BarChart3,
   Trophy,
+  Gauge,
+  AlertTriangle,
+  TrendingUp,
+  Target,
+  Layers,
+  Search,
+  ShieldCheck,
+  BadgeCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import LiveStatus from '@/components/LiveStatus';
@@ -33,6 +41,7 @@ interface Report {
   country: string;
   data: any;
   markdown: string;
+  createdAt?: string;
 }
 
 const flags: Record<string, string> = {
@@ -45,7 +54,6 @@ const getScore = (r: Report | null): number => {
   if (!r) return 0;
   const d = r.data || {};
 
-  // Product score
   if (r.type === 'product') {
     const score =
       d.market_score ??
@@ -56,10 +64,8 @@ const getScore = (r: Report | null): number => {
     return typeof score === 'number' ? Math.min(score, 100) : 0;
   }
 
-  // SEO score – combine multiple signals
   if (r.type === 'seo') {
     let score = 0;
-
     if (d.trend_score === 'Evergreen') score += 30;
     else if (d.trend_score === 'Seasonal') score += 20;
 
@@ -71,10 +77,8 @@ const getScore = (r: Report | null): number => {
       const last = forecast[forecast.length - 1]?.traffic ?? forecast[forecast.length - 1] ?? 0;
       score += Math.min(Math.round(last / 1000), 30);
     }
-
     return Math.min(Math.round(score), 100);
   }
-
   return 0;
 };
 
@@ -98,6 +102,42 @@ const getProfitOrTraffic = (r: Report | null): number => {
 
   const topVolumes = (d.keywords || []).slice(0, 10).reduce((sum: number, k: any) => sum + (k.volume || 0), 0);
   return Math.round(topVolumes * 0.01);
+};
+
+const getTopKeywords = (r: Report | null): string[] => {
+  if (!r || r.type !== 'seo') return [];
+  const kws = r.data?.keywords || [];
+  return kws.slice(0, 5).map((k: any) => k.keyword || '');
+};
+
+const getCommonKeywords = (r1: Report | null, r2: Report | null): number => {
+  const set1 = new Set(getTopKeywords(r1).map(k => k.toLowerCase()));
+  const set2 = new Set(getTopKeywords(r2).map(k => k.toLowerCase()));
+  let count = 0;
+  set1.forEach(k => {
+    if (set2.has(k)) count++;
+  });
+  return count;
+};
+
+const getRiskCount = (r: Report | null): number => {
+  return (r?.data?.risk_matrix || r?.data?.risk_radar || r?.data?.risk_assessment || []).length || 0;
+};
+
+const getDataCompleteness = (r: Report | null): number => {
+  if (!r) return 0;
+  const d = r.data || {};
+  let checks = 0;
+  let total = 0;
+
+  total++; if (d.keywords && d.keywords.length > 0) checks++;
+  total++; if (d.chart_data && (d.chart_data.trend_12m || d.chart_data.traffic_forecast_6m)) checks++;
+  total++; if (r.type === 'product' && d.financial_model) checks++;
+  total++; if (r.type === 'seo' && d.serp_landscape && d.serp_landscape.length > 0) checks++;
+  total++; if (d.case_studies && d.case_studies.length > 0) checks++;
+  total++; if (r.markdown && r.markdown.length > 100) checks++;
+
+  return Math.round((checks / total) * 100);
 };
 
 export default function ComparePage() {
@@ -128,6 +168,11 @@ export default function ComparePage() {
       return;
     }
 
+    if (selected1 === selected2) {
+      toast.error('Please select two different reports');
+      return;
+    }
+
     try {
       const [res1, res2] = await Promise.all([
         fetch(`${API_URL}/reports/${selected1}`),
@@ -155,7 +200,7 @@ export default function ComparePage() {
       toast.error('No comparison to copy');
       return;
     }
-    const md = `# MusePRO — Report Comparison\n\n## Report 1\n- **Niche:** ${report1.niche}\n- **Country:** ${flags[report1.country]} ${report1.country.toUpperCase()}\n- **Type:** ${report1.type}\n- **Market Score:** ${getScore(report1)}/100\n- **Opportunity Level:** ${report1.data?.opportunity_level || report1.data?.trend_assessment || report1.data?.trend_score || 'N/A'}\n- **Est. Monthly Profit / Traffic:** ${report1.type === 'product' ? `$${getProfitOrTraffic(report1).toLocaleString()}` : `${getProfitOrTraffic(report1).toLocaleString()} visits`}\n\n## Report 2\n- **Niche:** ${report2.niche}\n- **Country:** ${flags[report2.country]} ${report2.country.toUpperCase()}\n- **Type:** ${report2.type}\n- **Market Score:** ${getScore(report2)}/100\n- **Opportunity Level:** ${report2.data?.opportunity_level || report2.data?.trend_assessment || report2.data?.trend_score || 'N/A'}\n- **Est. Monthly Profit / Traffic:** ${report2.type === 'product' ? `$${getProfitOrTraffic(report2).toLocaleString()}` : `${getProfitOrTraffic(report2).toLocaleString()} visits`}\n\n## Winner\n**${getScore(report1) >= getScore(report2) ? report1.niche : report2.niche}** is the stronger opportunity.`;
+    const md = `# MusePRO — Report Comparison\n\n## Report 1\n- **Niche:** ${report1.niche}\n- **Country:** ${flags[report1.country]} ${report1.country.toUpperCase()}\n- **Type:** ${report1.type}\n- **Market Score:** ${getScore(report1)}/100\n- **Data Completeness:** ${getDataCompleteness(report1)}%\n- **Est. Monthly ${report1.type === 'product' ? 'Profit' : 'Traffic'}:** ${report1.type === 'product' ? `$${getProfitOrTraffic(report1).toLocaleString()}` : `${getProfitOrTraffic(report1).toLocaleString()} visits`}\n\n## Report 2\n- **Niche:** ${report2.niche}\n- **Country:** ${flags[report2.country]} ${report2.country.toUpperCase()}\n- **Type:** ${report2.type}\n- **Market Score:** ${getScore(report2)}/100\n- **Data Completeness:** ${getDataCompleteness(report2)}%\n- **Est. Monthly ${report2.type === 'product' ? 'Profit' : 'Traffic'}:** ${report2.type === 'product' ? `$${getProfitOrTraffic(report2).toLocaleString()}` : `${getProfitOrTraffic(report2).toLocaleString()} visits`}\n\n## Winner\n**${getScore(report1) >= getScore(report2) ? report1.niche : report2.niche}** is the stronger opportunity.`;
     await navigator.clipboard.writeText(md);
     setCopied(true);
     toast.success('Comparison markdown copied');
@@ -170,8 +215,10 @@ export default function ComparePage() {
     const rows = [
       ['Metric', report1.niche, report2.niche],
       ['Market Score', getScore(report1), getScore(report2)],
-      ['Opportunity Level', report1.data?.opportunity_level || report1.data?.trend_assessment || report1.data?.trend_score || '', report2.data?.opportunity_level || report2.data?.trend_assessment || report2.data?.trend_score || ''],
-      ['Est. Monthly Profit / Traffic', report1.type === 'product' ? `$${getProfitOrTraffic(report1)}` : `${getProfitOrTraffic(report1)} visits`, report2.type === 'product' ? `$${getProfitOrTraffic(report2)}` : `${getProfitOrTraffic(report2)} visits`],
+      ['Data Completeness', `${getDataCompleteness(report1)}%`, `${getDataCompleteness(report2)}%`],
+      ['Common Keywords', getCommonKeywords(report1, report2), ''],
+      ['Risk Count', getRiskCount(report1), getRiskCount(report2)],
+      ['Est. Monthly ' + (report1.type === 'product' ? 'Profit' : 'Traffic'), report1.type === 'product' ? `$${getProfitOrTraffic(report1)}` : `${getProfitOrTraffic(report1)} visits`, report2.type === 'product' ? `$${getProfitOrTraffic(report2)}` : `${getProfitOrTraffic(report2)} visits`],
       ['Winner', getScore(report1) >= getScore(report2) ? report1.niche : report2.niche, ''],
     ];
     const csv = rows.map(row => row.join(',')).join('\n');
@@ -213,8 +260,10 @@ export default function ComparePage() {
           <table>
             <tr><th>Metric</th><th>${report1.niche}</th><th>${report2.niche}</th></tr>
             <tr><td>Market Score</td><td>${getScore(report1)}/100</td><td>${getScore(report2)}/100</td></tr>
-            <tr><td>Opportunity Level</td><td>${report1.data?.opportunity_level || report1.data?.trend_assessment || report1.data?.trend_score || 'N/A'}</td><td>${report2.data?.opportunity_level || report2.data?.trend_assessment || report2.data?.trend_score || 'N/A'}</td></tr>
-            <tr><td>Est. Monthly Profit / Traffic</td><td>${report1.type === 'product' ? `$${getProfitOrTraffic(report1).toLocaleString()}` : `${getProfitOrTraffic(report1).toLocaleString()} visits`}</td><td>${report2.type === 'product' ? `$${getProfitOrTraffic(report2).toLocaleString()}` : `${getProfitOrTraffic(report2).toLocaleString()} visits`}</td></tr>
+            <tr><td>Data Completeness</td><td>${getDataCompleteness(report1)}%</td><td>${getDataCompleteness(report2)}%</td></tr>
+            <tr><td>Common Keywords</td><td colspan="2">${getCommonKeywords(report1, report2)}</td></tr>
+            <tr><td>Risk Count</td><td>${getRiskCount(report1)}</td><td>${getRiskCount(report2)}</td></tr>
+            <tr><td>Est. Monthly ${report1.type === 'product' ? 'Profit' : 'Traffic'}</td><td>${report1.type === 'product' ? `$${getProfitOrTraffic(report1).toLocaleString()}` : `${getProfitOrTraffic(report1).toLocaleString()} visits`}</td><td>${report2.type === 'product' ? `$${getProfitOrTraffic(report2).toLocaleString()}` : `${getProfitOrTraffic(report2).toLocaleString()} visits`}</td></tr>
           </table>
           <p class="winner">Winner: ${getScore(report1) >= getScore(report2) ? report1.niche : report2.niche}</p>
         </body>
@@ -230,9 +279,10 @@ export default function ComparePage() {
     { metric: report1.type === 'product' ? 'Profit' : 'Traffic', report1: getProfitOrTraffic(report1), report2: getProfitOrTraffic(report2) },
   ] : [];
 
+  const commonKeywords = report1 && report2 ? getCommonKeywords(report1, report2) : 0;
+
   return (
     <main className="min-h-screen bg-[#09090B] text-white font-['Inter']">
-      {/* Navbar */}
       <nav className="fixed top-0 w-full z-50 bg-[#09090B]/80 backdrop-blur-xl border-b border-neutral-800/60">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -334,49 +384,53 @@ export default function ComparePage() {
 
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Report 1 */}
-              <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}
-                className={`p-6 rounded-2xl border-2 ${getScore(report1) >= getScore(report2) ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-neutral-800 bg-[#0F0F14]'}`}>
-                <div className="flex items-center justify-between mb-4">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${report1.type === 'product' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-indigo-500/20 text-indigo-400'}`}>{report1.type.toUpperCase()}</span>
-                  <span className="text-sm text-neutral-400">{flags[report1.country]} {report1.country.toUpperCase()}</span>
-                </div>
-                <h3 className="text-xl font-bold capitalize mb-4">{report1.niche}</h3>
-                <div className="space-y-3 text-sm">
-                  <div>
-                    <p className="text-neutral-500">Market Score</p>
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden"><div className="h-full bg-indigo-500 rounded-full" style={{ width: `${getScore(report1)}%` }} /></div>
-                      <span className="font-mono font-bold">{getScore(report1)}/100</span>
-                    </div>
+              {[
+                { report: report1, color: 'indigo', score: getScore(report1), completeness: getDataCompleteness(report1), profitOrTraffic: getProfitOrTraffic(report1), risks: getRiskCount(report1), isWinner: getScore(report1) >= getScore(report2) },
+                { report: report2, color: 'purple', score: getScore(report2), completeness: getDataCompleteness(report2), profitOrTraffic: getProfitOrTraffic(report2), risks: getRiskCount(report2), isWinner: getScore(report2) > getScore(report1) },
+              ].map(({ report, color, score, completeness, profitOrTraffic, risks, isWinner }) => (
+                <motion.div
+                  key={report._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className={`p-6 rounded-2xl border-2 ${isWinner ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-neutral-800 bg-[#0F0F14]'}`}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${report.type === 'product' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-indigo-500/20 text-indigo-400'}`}>{report.type.toUpperCase()}</span>
+                    <span className="text-sm text-neutral-400">{flags[report.country]} {report.country.toUpperCase()}</span>
                   </div>
-                  <p><span className="text-neutral-500">Opportunity:</span> <strong>{report1.data?.opportunity_level || report1.data?.trend_assessment || report1.data?.trend_score || 'N/A'}</strong></p>
-                  <p><span className="text-neutral-500">{report1.type === 'product' ? 'Est. Monthly Profit:' : 'Est. 6‑Month Traffic:'}</span> <strong>{report1.type === 'product' ? `$${getProfitOrTraffic(report1).toLocaleString()}` : `${getProfitOrTraffic(report1).toLocaleString()} visits`}</strong></p>
-                  <p><span className="text-neutral-500">Risks:</span> <strong>{(report1.data?.risk_matrix || report1.data?.risk_radar || []).length}</strong></p>
-                </div>
-              </motion.div>
+                  <h3 className="text-xl font-bold capitalize mb-4">{report.niche}</h3>
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <p className="text-neutral-500 flex items-center gap-1.5"><Gauge size={14} /> Market Score</p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden"><div className={`h-full rounded-full ${color === 'indigo' ? 'bg-indigo-500' : 'bg-purple-500'}`} style={{ width: `${score}%` }} /></div>
+                        <span className="font-mono font-bold">{score}/100</span>
+                      </div>
+                    </div>
+                    <p className="flex items-center gap-1.5"><BadgeCheck size={14} className="text-neutral-500" /> Data Completeness: <strong>{completeness}%</strong></p>
+                    <p className="flex items-center gap-1.5"><TrendingUp size={14} className="text-neutral-500" /> {report.type === 'product' ? 'Est. Monthly Profit:' : 'Est. 6‑Month Traffic:'} <strong>{report.type === 'product' ? `$${profitOrTraffic.toLocaleString()}` : `${profitOrTraffic.toLocaleString()} visits`}</strong></p>
+                    <p className="flex items-center gap-1.5"><AlertTriangle size={14} className="text-neutral-500" /> Risks: <strong>{risks}</strong></p>
+                    <p className="flex items-center gap-1.5"><Layers size={14} className="text-neutral-500" /> Opportunity: <strong>{report.data?.opportunity_level || report.data?.trend_assessment || report.data?.trend_score || 'N/A'}</strong></p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
 
-              {/* Report 2 */}
-              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}
-                className={`p-6 rounded-2xl border-2 ${getScore(report2) > getScore(report1) ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-neutral-800 bg-[#0F0F14]'}`}>
-                <div className="flex items-center justify-between mb-4">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${report2.type === 'product' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-indigo-500/20 text-indigo-400'}`}>{report2.type.toUpperCase()}</span>
-                  <span className="text-sm text-neutral-400">{flags[report2.country]} {report2.country.toUpperCase()}</span>
-                </div>
-                <h3 className="text-xl font-bold capitalize mb-4">{report2.niche}</h3>
-                <div className="space-y-3 text-sm">
-                  <div>
-                    <p className="text-neutral-500">Market Score</p>
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden"><div className="h-full bg-purple-500 rounded-full" style={{ width: `${getScore(report2)}%` }} /></div>
-                      <span className="font-mono font-bold">{getScore(report2)}/100</span>
-                    </div>
-                  </div>
-                  <p><span className="text-neutral-500">Opportunity:</span> <strong>{report2.data?.opportunity_level || report2.data?.trend_assessment || report2.data?.trend_score || 'N/A'}</strong></p>
-                  <p><span className="text-neutral-500">{report2.type === 'product' ? 'Est. Monthly Profit:' : 'Est. 6‑Month Traffic:'}</span> <strong>{report2.type === 'product' ? `$${getProfitOrTraffic(report2).toLocaleString()}` : `${getProfitOrTraffic(report2).toLocaleString()} visits`}</strong></p>
-                  <p><span className="text-neutral-500">Risks:</span> <strong>{(report2.data?.risk_matrix || report2.data?.risk_radar || []).length}</strong></p>
-                </div>
-              </motion.div>
+            {/* Additional Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800/60 text-center">
+                <h3 className="text-sm font-semibold mb-2 flex items-center justify-center gap-2"><Search size={16} className="text-indigo-400" /> Common Keywords</h3>
+                <p className="text-3xl font-black">{commonKeywords}</p>
+              </div>
+              <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800/60 text-center">
+                <h3 className="text-sm font-semibold mb-2 flex items-center justify-center gap-2"><ShieldCheck size={16} className="text-emerald-400" /> Avg. Data Completeness</h3>
+                <p className="text-3xl font-black">{Math.round((getDataCompleteness(report1) + getDataCompleteness(report2)) / 2)}%</p>
+              </div>
+              <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800/60 text-center">
+                <h3 className="text-sm font-semibold mb-2 flex items-center justify-center gap-2"><Target size={16} className="text-purple-400" /> Combined Opportunity</h3>
+                <p className="text-3xl font-black">{(getScore(report1) + getScore(report2)) / 2}/100</p>
+              </div>
             </div>
 
             {/* Combined Chart */}
@@ -392,6 +446,24 @@ export default function ComparePage() {
                   <Bar dataKey="report2" name={report2.niche} fill="#A855F7" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
+            </div>
+
+            {/* Top Keywords */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800/60">
+                <h3 className="text-sm font-semibold mb-3">Top Keywords — {report1.niche}</h3>
+                <ul className="space-y-2">
+                  {getTopKeywords(report1).map((kw, i) => <li key={i} className="text-sm text-neutral-300">{kw}</li>)}
+                  {getTopKeywords(report1).length === 0 && <li className="text-sm text-neutral-500">No keywords available</li>}
+                </ul>
+              </div>
+              <div className="p-5 rounded-2xl bg-[#0F0F14] border border-neutral-800/60">
+                <h3 className="text-sm font-semibold mb-3">Top Keywords — {report2.niche}</h3>
+                <ul className="space-y-2">
+                  {getTopKeywords(report2).map((kw, i) => <li key={i} className="text-sm text-neutral-300">{kw}</li>)}
+                  {getTopKeywords(report2).length === 0 && <li className="text-sm text-neutral-500">No keywords available</li>}
+                </ul>
+              </div>
             </div>
           </div>
         ) : (
