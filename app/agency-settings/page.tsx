@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { toast } from 'sonner';
-import { Sparkles, Save, Palette, Type, Building2, Settings, ArrowRight } from 'lucide-react';
+import { Sparkles, Save, Palette, Type, Building2, Settings, ArrowRight, Globe, AtSign, FileText } from 'lucide-react';
 import LiveStatus from '@/components/LiveStatus';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production.up.railway.app/api';
@@ -13,6 +13,8 @@ export default function AgencySettingsPage() {
   
   const [agencyName, setAgencyName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
+  const [tagline, setTagline] = useState('');
+  const [website, setWebsite] = useState('');
   const [primaryColor, setPrimaryColor] = useState('#6366F1');
   const [secondaryColor, setSecondaryColor] = useState('#10B981');
   const [fontFamily, setFontFamily] = useState('Inter');
@@ -30,6 +32,8 @@ export default function AgencySettingsPage() {
         if (data) {
           setAgencyName(data.agencyName || '');
           setLogoUrl(data.logoUrl || '');
+          setTagline(data.tagline || '');
+          setWebsite(data.website || '');
           setPrimaryColor(data.primaryColor || '#6366F1');
           setSecondaryColor(data.secondaryColor || '#10B981');
           setFontFamily(data.fontFamily || 'Inter');
@@ -52,16 +56,13 @@ export default function AgencySettingsPage() {
       const res = await fetch(`${API_URL}/agency-settings`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agencyName, logoUrl, primaryColor, secondaryColor, fontFamily, pdfTheme, footerText, supportEmail })
+        body: JSON.stringify({ agencyName, logoUrl, tagline, website, primaryColor, secondaryColor, fontFamily, pdfTheme, footerText, supportEmail })
       });
       if (!res.ok) throw new Error('Failed to save');
       toast.success('White-Label settings saved!');
     } catch (err) {
-      if (err instanceof Error) {
-        toast.error(err.message);
-      } else {
-        toast.error('An unexpected error occurred');
-      }
+      if (err instanceof Error) toast.error(err.message);
+      else toast.error('An unexpected error occurred');
     } finally {
       setSaving(false);
     }
@@ -71,10 +72,8 @@ export default function AgencySettingsPage() {
 
   return (
     <main className="min-h-screen bg-[#0A0A0A] text-white font-['Inter'] relative overflow-hidden">
-      {/* Background Glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-[500px] bg-indigo-600/20 blur-[120px] pointer-events-none" />
 
-      {/* 🧭 Premium Navbar with Links */}
       <nav className="sticky top-0 z-50 bg-black/70 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
@@ -118,12 +117,26 @@ export default function AgencySettingsPage() {
               <input type="text" value={agencyName} onChange={(e) => setAgencyName(e.target.value)} className="w-full p-3 rounded-xl bg-[#0A0A0A] border border-neutral-800 focus:border-indigo-500 outline-none" />
             </div>
             <div>
-              <label className="text-sm text-neutral-400 block mb-2">Logo URL (Paste Image Link)</label>
+              <label className="text-sm text-neutral-400 block mb-2">Tagline</label>
+              <input type="text" value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="Premium Market Intelligence" className="w-full p-3 rounded-xl bg-[#0A0A0A] border border-neutral-800 focus:border-indigo-500 outline-none" />
+            </div>
+            <div>
+              <label className="text-sm text-neutral-400 block mb-2">Logo URL</label>
               <input type="text" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://youragency.com/logo.png" className="w-full p-3 rounded-xl bg-[#0A0A0A] border border-neutral-800 focus:border-indigo-500 outline-none" />
             </div>
             <div>
+              <label className="text-sm text-neutral-400 block mb-2">Website</label>
+              <div className="relative">
+                <Globe size={16} className="absolute left-3 top-3 text-neutral-500" />
+                <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://youragency.com" className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#0A0A0A] border border-neutral-800 focus:border-indigo-500 outline-none" />
+              </div>
+            </div>
+            <div>
               <label className="text-sm text-neutral-400 block mb-2">Support Email</label>
-              <input type="email" value={supportEmail} onChange={(e) => setSupportEmail(e.target.value)} className="w-full p-3 rounded-xl bg-[#0A0A0A] border border-neutral-800 focus:border-indigo-500 outline-none" />
+              <div className="relative">
+                <AtSign size={16} className="absolute left-3 top-3 text-neutral-500" />
+                <input type="email" value={supportEmail} onChange={(e) => setSupportEmail(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#0A0A0A] border border-neutral-800 focus:border-indigo-500 outline-none" />
+              </div>
             </div>
 
             <div className="flex items-center gap-2 mt-4">
@@ -171,7 +184,7 @@ export default function AgencySettingsPage() {
           {/* Live Preview */}
           <div className="p-6 rounded-2xl bg-[#0F0F14] border border-neutral-800">
             <div className="flex items-center gap-2 mb-4">
-              <Type size={20} className="text-purple-400" />
+              <FileText size={20} className="text-purple-400" />
               <h2 className="text-xl font-semibold">Live Preview</h2>
             </div>
             <div className="p-6 rounded-xl border border-neutral-700" style={{ background: pdfTheme === 'dark' ? '#111' : '#fff', fontFamily }}>
@@ -179,7 +192,7 @@ export default function AgencySettingsPage() {
                 {logoUrl && <img src={logoUrl} alt="Logo" className="w-10 h-10 object-contain rounded" />}
                 <div>
                   <h1 className="text-xl font-bold" style={{ color: pdfTheme === 'dark' ? '#fff' : '#000' }}>{agencyName}</h1>
-                  <p className="text-xs" style={{ color: primaryColor }}>Premium SEO Intelligence</p>
+                  {tagline && <p className="text-xs" style={{ color: primaryColor }}>{tagline}</p>}
                 </div>
               </div>
               <div className="space-y-2">
