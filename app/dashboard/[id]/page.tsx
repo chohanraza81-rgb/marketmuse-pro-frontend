@@ -11,13 +11,13 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from 'recharts';
 import {
-  Download, Mail, Share2, Printer, Sparkles, ArrowLeft,
-  Copy, Check, Clock, Send, Package, TrendingUp, Globe, Zap,
-  DollarSign, Users, Target, BarChart, Gauge, X, Paperclip,
-  Upload, FileText, AlertCircle, CheckCircle2
+  Download, Share2, Printer, Sparkles, ArrowLeft,
+  Copy, Check, Clock, Package, TrendingUp, Globe, Zap,
+  DollarSign, Users, BarChart, AlertCircle, CheckCircle2, X
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { toast, Toaster } from 'sonner';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production.up.railway.app/api';
 
@@ -30,27 +30,11 @@ export default function ReportDashboard() {
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
-  // Modal states
-  const [showEmailModal, setShowEmailModal] = useState(false);
+
   const [showShareModal, setShowShareModal] = useState(false);
-  
-  // Email states
-  const [emailTo, setEmailTo] = useState('');
-  const [emailSubject, setEmailSubject] = useState('');
-  const [emailBody, setEmailBody] = useState('');
-  const [sendMarkdown, setSendMarkdown] = useState(true);
-  const [sendSnapshot, setSendSnapshot] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<{ name: string; content: string; contentType: string }[]>([]);
-  const [sending, setSending] = useState(false);
-  
-  // Share states
   const [shareLink, setShareLink] = useState('');
-  const [shareExpiry, setShareExpiry] = useState(24);
-  const [sharePassword, setSharePassword] = useState('');
   const [copied, setCopied] = useState(false);
-  const [generatingLink, setGeneratingLink] = useState(false);
-  
+
   const [generatingPDF, setGeneratingPDF] = useState(false);
 
   useEffect(() => {
@@ -60,10 +44,6 @@ export default function ReportDashboard() {
         if (!res.ok) throw new Error('Failed to load report');
         const data = await res.json();
         setReport(data);
-        
-        const typeLabel = data.type === 'product' ? 'Product Research' : 'SEO';
-        setEmailSubject(`Your ${typeLabel} Report: ${data.niche}`);
-        setEmailBody(`Dear Client,\n\nPlease find your ${typeLabel} Report attached.\n\nReport: ${data.niche}\nCountry: ${data.country?.toUpperCase()}\n\nBest regards,\nMusePRO Team`);
       } catch (err: any) {
         setError(err?.message || 'Failed to load report');
       } finally {
@@ -73,154 +53,80 @@ export default function ReportDashboard() {
     if (reportId) fetchReport();
   }, [reportId]);
 
+  // 📄 High-Quality PDF Generation with correct pagination
   const generatePDF = async () => {
+    const element = document.getElementById('dashboard-content');
+    if (!element) return;
+
     setGeneratingPDF(true);
+    toast.loading('Generating PDF...', {
+      description: 'Crystal clear quality, this may take a few seconds.',
+    });
+
     try {
-      const element = document.getElementById('dashboard-content');
-      if (!element) return;
-      const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#0A0A0F', useCORS: true });
+      const canvas = await html2canvas(element, {
+        scale: 3,
+        backgroundColor: '#0A0A0F',
+        useCORS: true,
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight,
+      });
+
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      
-      let heightLeft = pdfHeight;
-      let position = 0;
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-      heightLeft -= pdf.internal.pageSize.getHeight();
-      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true,
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 5;
+      const imgWidth = pageWidth - margin * 2;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      let heightLeft = imgHeight;
+      let position = margin;
+
+      pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+      heightLeft -= (pageHeight - margin * 2);
+
       while (heightLeft > 0) {
-        position = heightLeft - pdfHeight;
+        position -= (pageHeight - margin * 2);
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-        heightLeft -= pdf.internal.pageSize.getHeight();
+        pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+        heightLeft -= (pageHeight - margin * 2);
       }
-      
+
       pdf.save(`MusePRO_${report?.niche?.replace(/\s+/g, '_')}.pdf`);
+      toast.success('PDF Downloaded Successfully');
     } catch (err) {
-      alert('Failed to generate PDF');
+      console.error('PDF generation error:', err);
+      toast.error('PDF Generation Failed', {
+        description: 'Please try again.',
+      });
     } finally {
       setGeneratingPDF(false);
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64 = (reader.result as string).split(',')[1];
-        setUploadedFiles(prev => [...prev, {
-          name: file.name,
-          content: base64,
-          contentType: file.type || 'application/octet-stream',
-        }]);
-      };
-      reader.readAsDataURL(file);
-    });
+  const handleShare = () => {
+    // Direct dashboard link – no API needed, no 404
+    const link = `${window.location.origin}/dashboard/${reportId}`;
+    setShareLink(link);
+    setShowShareModal(true);
   };
 
-  const removeUploadedFile = (index: number) => {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSendEmail = async () => {
-    if (!emailTo) {
-      alert('Please enter recipient email');
-      return;
-    }
-    setSending(true);
+  const copyToClipboard = async () => {
     try {
-      const emailAttachments = [];
-      
-      if (sendMarkdown && report?.markdown) {
-        emailAttachments.push({
-          name: `${report.niche?.replace(/\s+/g, '_')}_report.md`,
-          content: Buffer.from(report.markdown).toString('base64'),
-          contentType: 'text/markdown',
-        });
-      }
-
-      if (sendSnapshot) {
-        const element = document.getElementById('dashboard-content');
-        if (element) {
-          const canvas = await html2canvas(element, { scale: 1.5, backgroundColor: '#0A0A0F', useCORS: true });
-          const imgData = canvas.toDataURL('image/png').split(',')[1];
-          emailAttachments.push({
-            name: `${report.niche?.replace(/\s+/g, '_')}_dashboard.png`,
-            content: imgData,
-            contentType: 'image/png',
-          });
-        }
-      }
-
-      // Add uploaded files
-      uploadedFiles.forEach(file => {
-        emailAttachments.push(file);
+      await navigator.clipboard.writeText(shareLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast.error('Copy Failed', {
+        description: 'Please copy manually.',
       });
-
-      const payload = {
-        to: emailTo.split(',').map((e: string) => e.trim()).filter(Boolean),
-        subject: emailSubject,
-        body: emailBody,
-        attachments: emailAttachments,
-      };
-
-      const res = await fetch(`${API_URL}/reports/${reportId}/email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      
-      const responseData = await res.json().catch(() => ({}));
-      
-      if (!res.ok) {
-        throw new Error(responseData?.error || responseData?.details || 'Failed to send email');
-      }
-      
-      alert('✅ Email sent successfully!');
-      setShowEmailModal(false);
-      setEmailTo('');
-      setUploadedFiles([]);
-    } catch (err: any) {
-      console.error('Email error:', err);
-      alert('❌ ' + (err?.message || 'Failed to send email'));
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const handleGenerateShareLink = async () => {
-    setGeneratingLink(true);
-    try {
-      console.log('Generating share link for report:', reportId);
-      
-      const res = await fetch(`${API_URL}/reports/${reportId}/share`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          expiresInHours: shareExpiry,
-          password: sharePassword || null,
-        }),
-      });
-      
-      const responseData = await res.json().catch(() => ({}));
-      console.log('Share API response:', responseData);
-      
-      if (!res.ok) {
-        throw new Error(responseData?.error || 'Failed to generate link');
-      }
-      
-      const fullLink = `${window.location.origin}${responseData.link}`;
-      setShareLink(fullLink);
-    } catch (err: any) {
-      console.error('Share error:', err);
-      alert('❌ ' + (err?.message || 'Failed to generate link'));
-    } finally {
-      setGeneratingLink(false);
     }
   };
 
@@ -246,7 +152,6 @@ export default function ReportDashboard() {
 
   const { data, keywords, serp_landscape, traffic_estimate, chart_data } = report;
   const isProduct = report.type === 'product';
-
   const overallScore = data?.score || 75;
 
   const trendData = chart_data?.trend_12m?.length > 0 
@@ -259,7 +164,6 @@ export default function ReportDashboard() {
     ? chart_data.traffic_forecast_6m 
     : Array.from({ length: 6 }, (_, i) => ({ month: `M${i + 1}`, traffic: Math.floor(500 + Math.random() * 1500) }));
 
-  // Summary extraction
   const summary = isProduct 
     ? (data?.trend_summary || 'High potential market with growing demand.')
     : (data?.trend_summary || report?.trend_summary || 'Steady market growth observed.');
@@ -270,7 +174,6 @@ export default function ReportDashboard() {
     <main className="min-h-screen bg-[#0A0A0F] text-white font-['Inter'] relative overflow-hidden">
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-[500px] bg-indigo-600/20 blur-[120px] pointer-events-none" />
 
-      {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-black/70 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
@@ -306,12 +209,9 @@ export default function ReportDashboard() {
             
             <div className="flex flex-wrap gap-2">
               <button onClick={generatePDF} disabled={generatingPDF} className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 font-semibold shadow-lg shadow-indigo-500/20 flex items-center gap-2 text-sm disabled:opacity-50 whitespace-nowrap">
-                <Download size={16} /> {generatingPDF ? '...' : 'PDF'}
+                <Download size={16} /> {generatingPDF ? 'Generating...' : 'PDF'}
               </button>
-              <button onClick={() => setShowEmailModal(true)} className="px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 hover:bg-white/20 font-semibold flex items-center gap-2 text-sm whitespace-nowrap">
-                <Mail size={16} /> Email
-              </button>
-              <button onClick={() => setShowShareModal(true)} className="px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 hover:bg-white/20 font-semibold flex items-center gap-2 text-sm whitespace-nowrap">
+              <button onClick={handleShare} className="px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 hover:bg-white/20 font-semibold flex items-center gap-2 text-sm whitespace-nowrap">
                 <Share2 size={16} /> Share
               </button>
               <button onClick={() => window.print()} className="px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 hover:bg-white/20 font-semibold flex items-center gap-2 text-sm whitespace-nowrap">
@@ -473,111 +373,48 @@ export default function ReportDashboard() {
         </div>
       </div>
 
-      {/* Email Modal */}
-      <AnimatePresence>
-      {showEmailModal && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="w-full max-w-lg rounded-3xl bg-[#0F0F14] border border-white/10 p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-xl font-bold flex items-center gap-2"><Mail size={18} className="text-indigo-400" /> Email Report</h2>
-              <button onClick={() => setShowEmailModal(false)} className="p-2 rounded-lg bg-white/5 hover:bg-white/10"><X size={16} /></button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs text-neutral-400 mb-1">Recipient Email *</label>
-                <input type="text" value={emailTo} onChange={(e) => setEmailTo(e.target.value)} placeholder="client@example.com" className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-indigo-500 outline-none text-sm" />
-              </div>
-              <div>
-                <label className="block text-xs text-neutral-400 mb-1">Subject</label>
-                <input type="text" value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-indigo-500 outline-none text-sm" />
-              </div>
-              <div>
-                <label className="block text-xs text-neutral-400 mb-1">Body</label>
-                <textarea value={emailBody} onChange={(e) => setEmailBody(e.target.value)} rows={3} className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-indigo-500 outline-none text-sm resize-none" />
-              </div>
-              <div>
-                <label className="block text-xs text-neutral-400 mb-2 flex items-center gap-1"><Paperclip size={12} /> Attachments</label>
-                <div className="space-y-1.5">
-                  <label className="flex items-center gap-2 cursor-pointer text-sm">
-                    <input type="checkbox" checked={sendMarkdown} onChange={() => setSendMarkdown(!sendMarkdown)} className="accent-indigo-500" />
-                    <span>Markdown Report (.md)</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer text-sm">
-                    <input type="checkbox" checked={sendSnapshot} onChange={() => setSendSnapshot(!sendSnapshot)} className="accent-indigo-500" />
-                    <span>Dashboard Snapshot (.png)</span>
-                  </label>
-                </div>
-              </div>
-              
-              {/* File Upload */}
-              <div>
-                <label className="block text-xs text-neutral-400 mb-1">Upload Additional Files</label>
-                <label className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-white/20 hover:border-indigo-500/50 cursor-pointer transition-all text-sm text-neutral-400 hover:text-white">
-                  <Upload size={16} />
-                  <span>Click to upload files</span>
-                  <input type="file" multiple onChange={handleFileUpload} className="hidden" />
-                </label>
-                {uploadedFiles.length > 0 && (
-                  <div className="mt-2 space-y-1">
-                    {uploadedFiles.map((file, i) => (
-                      <div key={i} className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-white/5 text-xs">
-                        <span className="truncate">{file.name}</span>
-                        <button onClick={() => removeUploadedFile(i)} className="text-red-400 hover:text-red-300"><X size={12} /></button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <button onClick={handleSendEmail} disabled={sending} className="w-full px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 font-semibold flex items-center justify-center gap-2 text-sm disabled:opacity-50">
-                <Send size={14} /> {sending ? 'Sending...' : 'Send Email'}
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-      </AnimatePresence>
-
       {/* Share Modal */}
       <AnimatePresence>
-      {showShareModal && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="w-full max-w-md rounded-3xl bg-[#0F0F14] border border-white/10 p-6 shadow-2xl">
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-xl font-bold flex items-center gap-2"><Share2 size={18} className="text-indigo-400" /> Share Report</h2>
-              <button onClick={() => setShowShareModal(false)} className="p-2 rounded-lg bg-white/5 hover:bg-white/10"><X size={16} /></button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs text-neutral-400 mb-1 flex items-center gap-1"><Clock size={12} /> Expiry Time</label>
-                <select value={shareExpiry} onChange={(e) => setShareExpiry(Number(e.target.value))} className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-indigo-500 outline-none text-sm">
-                  <option value={24}>24 hours</option>
-                  <option value={72}>3 days</option>
-                  <option value={168}>7 days</option>
-                  <option value={720}>30 days</option>
-                </select>
+        {showShareModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              className="w-full max-w-md rounded-3xl bg-[#0F0F14] border border-white/10 p-6 shadow-2xl"
+            >
+              <div className="flex justify-between items-center mb-5">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <Share2 size={18} className="text-indigo-400" /> Share Report
+                </h2>
+                <button onClick={() => setShowShareModal(false)} className="p-2 rounded-lg bg-white/5 hover:bg-white/10">
+                  <X size={16} />
+                </button>
               </div>
-              <div>
-                <label className="block text-xs text-neutral-400 mb-1">Password (optional)</label>
-                <input type="password" value={sharePassword} onChange={(e) => setSharePassword(e.target.value)} placeholder="Optional password" className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-indigo-500 outline-none text-sm" />
-              </div>
-              {shareLink ? (
+              <div className="space-y-3">
                 <div className="bg-white/5 border border-white/10 rounded-lg p-3 flex items-center justify-between gap-2">
                   <span className="text-xs truncate">{shareLink}</span>
-                  <button onClick={() => { navigator.clipboard.writeText(shareLink); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="p-2 rounded-lg bg-white/10 hover:bg-white/20 flex-shrink-0">
+                  <button
+                    onClick={copyToClipboard}
+                    className="p-2 rounded-lg bg-white/10 hover:bg-white/20 flex-shrink-0"
+                  >
                     {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
                   </button>
                 </div>
-              ) : (
-                <button onClick={handleGenerateShareLink} disabled={generatingLink} className="w-full px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 font-semibold flex items-center justify-center gap-2 text-sm disabled:opacity-50">
-                  <Share2 size={14} /> {generatingLink ? 'Generating...' : 'Generate Link'}
-                </button>
-              )}
-            </div>
+                <p className="text-xs text-neutral-500 text-center">
+                  Anyone with this link can view the dashboard.
+                </p>
+              </div>
+            </motion.div>
           </motion.div>
-        </motion.div>
-      )}
+        )}
       </AnimatePresence>
+
+      <Toaster richColors position="top-right" />
     </main>
   );
 }
