@@ -1,21 +1,18 @@
 'use client';
 
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  // Icons
   ArrowLeft, Home, Download, Share2, Printer, Copy, Check,
   FileDown, FileText, ChevronDown, X, Loader2, Lock, Clock,
   TrendingUp, Package, Gauge, Shield, AlertTriangle, CheckCircle2,
-  // Chart icons
-  BarChart3,
+  BarChart3, LayoutDashboard,
 } from 'lucide-react';
 import {
-  LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  LineChart, Line, AreaChart, Area, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import ReactMarkdown from 'react-markdown';
 import { toast, Toaster } from 'sonner';
@@ -24,7 +21,6 @@ import Navbar from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 
 // ═══════════════════════════════════════════════════════════════
 // CONSTANTS
@@ -33,85 +29,63 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   'https://marketmuse-pro-backend-production-fd01.up.railway.app/api';
 
-const CHART_COLORS = ['#533AFD', '#10B981', '#F59E0B', '#F85149', '#A855F7', '#06B6D4', '#EC4899', '#84CC16'];
-
 // Report type configs
-const REPORT_CONFIG = {
+const REPORT_CONFIG: Record<string, {
+  label: string;
+  icon: any;
+  accent: string;
+  layout: 'magazine' | 'command';
+  badge: 'default' | 'indigo' | 'purple' | 'emerald' | 'success' | 'warning' | 'danger' | 'critical';
+}> = {
   seo: {
-    label: 'SEO Research Report',
+    label: 'SEO Research',
     icon: TrendingUp,
     accent: 'var(--accent-indigo)',
-    layout: 'magazine' as const,
-    badge: 'indigo' as const,
+    layout: 'magazine',
+    badge: 'indigo',
   },
   product: {
-    label: 'Product Intelligence Report',
+    label: 'Product Intelligence',
     icon: Package,
     accent: 'var(--accent-emerald)',
-    layout: 'magazine' as const,
-    badge: 'success' as const,
+    layout: 'magazine',
+    badge: 'emerald',
   },
   technical_seo: {
     label: 'Technical SEO Audit',
     icon: Gauge,
     accent: 'var(--accent-purple)',
-    layout: 'command' as const,
-    badge: 'warning' as const,
+    layout: 'command',
+    badge: 'purple',
   },
   technical: {
     label: 'Technical SEO Audit',
     icon: Gauge,
     accent: 'var(--accent-purple)',
-    layout: 'command' as const,
-    badge: 'warning' as const,
+    layout: 'command',
+    badge: 'purple',
   },
   brand_protection: {
-    label: 'Counterfeit Intelligence Report',
+    label: 'Counterfeit Intelligence',
     icon: Shield,
     accent: 'var(--accent-red)',
-    layout: 'command' as const,
-    badge: 'critical' as const,
+    layout: 'command',
+    badge: 'critical',
   },
   brand: {
-    label: 'Counterfeit Intelligence Report',
+    label: 'Counterfeit Intelligence',
     icon: Shield,
     accent: 'var(--accent-red)',
-    layout: 'command' as const,
-    badge: 'critical' as const,
+    layout: 'command',
+    badge: 'critical',
   },
 };
 
 const getReportConfig = (type: string) => {
-  return REPORT_CONFIG[type as keyof typeof REPORT_CONFIG] || REPORT_CONFIG.seo;
+  return REPORT_CONFIG[type] || REPORT_CONFIG.seo;
 };
 
-// ═══════════════════════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════════════════════
-const safeString = (val: any, fallback: string = 'N/A'): string => {
-  if (!val || val === 'undefined' || val === 'null') return fallback;
-  return String(val).trim() || fallback;
-};
-
-const safeArray = (val: any): any[] => (Array.isArray(val) ? val : []);
-
-const formatCurrency = (num: number, symbol: string = '$'): string => {
-  return `${symbol}${num.toLocaleString('en-US')}`;
-};
-
-// Extract section from markdown
-const extractSection = (markdown: string, sectionTitle: string): string => {
-  if (!markdown) return '';
-  const safeTitle = sectionTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const regex = new RegExp(
-    `(${safeTitle})([\\s\\S]*?)(?=(\\n\\d+\\.\\s+[A-Z]|\\Z))`,
-    'i'
-  );
-  const match = markdown.match(regex);
-  return match ? `${match[1]}${match[2]}`.trim() : '';
-};
-
-// Get section list based on report type
+// Section definitions per report type
 const getSections = (type: string): Array<{ id: string; label: string; keyword: string }> => {
   if (type === 'product') {
     return [
@@ -164,7 +138,6 @@ const getSections = (type: string): Array<{ id: string; label: string; keyword: 
 // ═══════════════════════════════════════════════════════════════
 export default function UnifiedReportDashboard() {
   const params = useParams();
-  const router = useRouter();
   const reportId = params?.id as string;
 
   // ── State ──
@@ -203,7 +176,7 @@ export default function UnifiedReportDashboard() {
         if (!res.ok) throw new Error('Report not found');
         const data = await res.json();
         setReport(data);
-        setActiveSection(sections[0]?.id || 'overview');
+        setActiveSection(getSections(data.type || 'seo')[0]?.id || 'overview');
       } catch (err: any) {
         setError(err.message || 'Failed to load report');
       } finally {
@@ -211,7 +184,7 @@ export default function UnifiedReportDashboard() {
       }
     };
     fetchReport();
-  }, [reportId, sections]);
+  }, [reportId]);
 
   // ── Close dropdowns on outside click ──
   useEffect(() => {
@@ -227,16 +200,16 @@ export default function UnifiedReportDashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // ── Smooth scroll to section ──
+  // ── Scroll to section ──
   const scrollToSection = (keyword: string, id: string) => {
     setActiveSection(id);
     const markdown = report?.markdown || '';
-    const sectionContent = extractSection(markdown, keyword);
-    if (!sectionContent) {
-      toast.info('Section not found in report');
+    const cleanKeyword = keyword.replace(/^\d+\.\s*/, '');
+    const found = markdown.toLowerCase().includes(cleanKeyword.toLowerCase());
+    if (!found) {
+      toast.info(`Section "${cleanKeyword}" not found`);
       return;
     }
-    // Find the markdown element and scroll
     if (contentRef.current) {
       contentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -248,10 +221,14 @@ export default function UnifiedReportDashboard() {
       toast.error('Nothing to copy');
       return;
     }
-    await navigator.clipboard.writeText(text);
-    setCopied(label);
-    toast.success(`${label} copied`);
-    setTimeout(() => setCopied(''), 2000);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(label);
+      toast.success(`${label} copied`);
+      setTimeout(() => setCopied(''), 2000);
+    } catch {
+      toast.error('Copy failed');
+    }
   };
 
   // ── Export handlers ──
@@ -270,28 +247,21 @@ export default function UnifiedReportDashboard() {
 
   const handleExportCSV = () => {
     if (!report) return;
-    let rows: any[] = [];
-    if (report.keywords?.length > 0) {
-      rows = report.keywords.map((k: any) => ({
-        Keyword: k.keyword,
-        Volume: k.volume,
-        CPC: k.cpc,
-        KD: k.kd,
-        Intent: k.intent,
-      }));
-    }
-    if (rows.length === 0) {
-      toast.error('No exportable data');
+    const keywords = report.keywords || [];
+    if (keywords.length === 0) {
+      toast.error('No keyword data to export');
       return;
     }
-    const headers = Object.keys(rows[0]).join(',');
-    const body = rows.map((r) => Object.values(r).join(',')).join('\n');
-    const csv = `${headers}\n${body}`;
+    const headers = 'Keyword,Volume,CPC,KD,Intent';
+    const rows = keywords
+      .map((k: any) => `${k.keyword},${k.volume || 0},${k.cpc || 0},${k.kd || 0},${k.intent || 'N/A'}`)
+      .join('\n');
+    const csv = `${headers}\n${rows}`;
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `MusePRO_${report.niche?.replace(/\s+/g, '_') || 'Report'}.csv`;
+    a.download = `MusePRO_${report.niche?.replace(/\s+/g, '_') || 'Report'}_keywords.csv`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success('CSV downloaded');
@@ -305,24 +275,25 @@ export default function UnifiedReportDashboard() {
       toast.error('Allow pop-ups for PDF');
       return;
     }
+    const md = (report.markdown || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     w.document.write(`
       <html>
         <head>
-          <title>MusePRO Report — ${report.niche}</title>
+          <title>MusePRO — ${report.niche}</title>
           <style>
-            body { font-family: Inter, Arial, sans-serif; padding: 40px; color: #111; line-height: 1.6; }
-            h1 { font-size: 28px; margin-bottom: 8px; }
-            h2 { font-size: 18px; margin-top: 24px; border-bottom: 1px solid #eee; padding-bottom: 6px; }
-            .meta { color: #666; font-size: 12px; margin-bottom: 30px; }
-            pre { white-space: pre-wrap; font-family: inherit; font-size: 13px; }
+            body { font-family: Inter, Arial, sans-serif; padding: 40px; color: #111; line-height: 1.6; max-width: 900px; margin: 0 auto; }
+            h1 { font-size: 26px; margin-bottom: 8px; }
+            .meta { color: #666; font-size: 12px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #eee; }
+            pre { white-space: pre-wrap; font-family: inherit; font-size: 12px; line-height: 1.7; }
+            @media print { body { padding: 20px; } }
           </style>
         </head>
         <body>
           <h1>${report.niche}</h1>
           <div class="meta">
-            ${config.label} • ${report.country?.toUpperCase() || ''} • ${new Date(report.createdAt).toLocaleDateString()}
+            ${config.label} • ${(report.country || '').toUpperCase()} • ${new Date(report.createdAt).toLocaleDateString()}
           </div>
-          <pre>${(report.markdown || '').replace(/</g, '&lt;')}</pre>
+          <pre>${md}</pre>
         </body>
       </html>
     `);
@@ -331,11 +302,9 @@ export default function UnifiedReportDashboard() {
     setExportOpen(false);
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const handlePrint = () => window.print();
 
-  // ── Share handler ──
+  // ── Share handlers ──
   const handleShare = async () => {
     if (!report) return;
     try {
@@ -348,7 +317,6 @@ export default function UnifiedReportDashboard() {
         }),
       });
       if (!res.ok) throw new Error('Failed to create share link');
-      const data = await res.json();
       const fullLink = `${window.location.origin}/dashboard/${report._id}`;
       setShareLink(fullLink);
       setShareGenerated(true);
@@ -386,12 +354,14 @@ export default function UnifiedReportDashboard() {
         <main className="flex min-h-[80vh] items-center justify-center bg-[var(--bg-base)]">
           <div className="max-w-md text-center">
             <AlertTriangle size={40} className="mx-auto text-[var(--accent-red)]" />
-            <h2 className="mt-4 text-[20px] font-medium text-[var(--text-primary)]">Report not found</h2>
+            <h2 className="mt-4 text-[20px] font-medium text-[var(--text-primary)]">
+              Report not found
+            </h2>
             <p className="mt-2 text-[13px] text-[var(--text-secondary)]">
               {error || 'The report you are looking for does not exist.'}
             </p>
             <Link href="/dashboard">
-              <Button variant="primary" size="md" className="mt-6" icon={<ArrowLeft size={14} />}>
+              <Button variant="primary" size="md" className="mt-6">
                 Back to Dashboard
               </Button>
             </Link>
@@ -401,7 +371,6 @@ export default function UnifiedReportDashboard() {
     );
   }
 
-  const isCommand = config.layout === 'command';
   const reportData = report.data || {};
   const keywords = report.keywords || [];
   const chartData = report.chart_data || {};
@@ -416,23 +385,23 @@ export default function UnifiedReportDashboard() {
     <>
       <Navbar />
 
-      <main className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]">
+      <main className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] pb-20">
         {/* ── Sticky Action Header ── */}
         <div className="sticky top-14 z-40 border-b border-[var(--border-subtle)] bg-[var(--bg-base)]/95 backdrop-blur-xl">
-          <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-4 px-6 py-3">
+          <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3 px-6 py-3">
             {/* Left: Back + Title */}
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 items-center gap-3">
               <Link
                 href="/dashboard"
-                className="flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                className="flex flex-shrink-0 items-center gap-1.5 text-[13px] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
               >
                 <ArrowLeft size={14} />
-                <span>Dashboard</span>
+                <span className="hidden sm:inline">Dashboard</span>
               </Link>
-              <div className="h-4 w-px bg-[var(--border-subtle)]" />
-              <div className="flex items-center gap-2">
-                <config.icon size={14} style={{ color: config.accent }} />
-                <span className="text-[13px] font-medium text-[var(--text-primary)]">
+              <div className="h-4 w-px flex-shrink-0 bg-[var(--border-subtle)]" />
+              <div className="flex min-w-0 items-center gap-2">
+                <config.icon size={14} style={{ color: config.accent }} className="flex-shrink-0" />
+                <span className="truncate text-[13px] font-medium text-[var(--text-primary)]">
                   {report.niche}
                 </span>
                 <Badge variant={config.badge} size="sm">
@@ -442,7 +411,7 @@ export default function UnifiedReportDashboard() {
             </div>
 
             {/* Right: Actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-shrink-0 items-center gap-2">
               {/* Export Dropdown */}
               <div className="relative" ref={exportRef}>
                 <Button
@@ -451,7 +420,7 @@ export default function UnifiedReportDashboard() {
                   onClick={() => setExportOpen(!exportOpen)}
                   icon={<Download size={13} />}
                 >
-                  Export
+                  <span className="hidden sm:inline">Export</span>
                   <ChevronDown size={12} className={exportOpen ? 'rotate-180' : ''} />
                 </Button>
                 {exportOpen && (
@@ -490,7 +459,7 @@ export default function UnifiedReportDashboard() {
                   onClick={() => setCopyOpen(!copyOpen)}
                   icon={<Copy size={13} />}
                 >
-                  Copy
+                  <span className="hidden sm:inline">Copy</span>
                   <ChevronDown size={12} className={copyOpen ? 'rotate-180' : ''} />
                 </Button>
                 {copyOpen && (
@@ -508,19 +477,21 @@ export default function UnifiedReportDashboard() {
                     >
                       <Copy size={14} /> Copy Full Report
                     </button>
-                    <button
-                      onClick={() => {
-                        const kwText = keywords
-                          .slice(0, 50)
-                          .map((k: any) => `${k.keyword}\t${k.volume}\t${k.cpc}\t${k.kd}`)
-                          .join('\n');
-                        copyText(kwText, 'Keywords');
-                        setCopyOpen(false);
-                      }}
-                      className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[12px] text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-surface-3)]"
-                    >
-                      <Copy size={14} /> Copy Keywords
-                    </button>
+                    {keywords.length > 0 && (
+                      <button
+                        onClick={() => {
+                          const kwText = keywords
+                            .slice(0, 50)
+                            .map((k: any) => `${k.keyword}\t${k.volume}\t${k.cpc}\t${k.kd}`)
+                            .join('\n');
+                          copyText(kwText, 'Keywords');
+                          setCopyOpen(false);
+                        }}
+                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[12px] text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-surface-3)]"
+                      >
+                        <Copy size={14} /> Copy Keywords
+                      </button>
+                    )}
                   </motion.div>
                 )}
               </div>
@@ -537,7 +508,7 @@ export default function UnifiedReportDashboard() {
                 onClick={() => setShowShareModal(true)}
                 icon={<Share2 size={13} />}
               >
-                Share
+                <span className="hidden sm:inline">Share</span>
               </Button>
             </div>
           </div>
@@ -590,14 +561,14 @@ export default function UnifiedReportDashboard() {
           </aside>
 
           {/* ── Content ── */}
-          <div className="flex-1 min-w-0" ref={contentRef}>
+          <div className="min-w-0 flex-1" ref={contentRef}>
             {/* ── Report Title Header ── */}
             <div className="mb-6">
               <h1 className="text-[24px] font-normal tracking-[-0.02em] text-[var(--text-primary)] md:text-[32px]">
                 {report.niche}
               </h1>
               <div className="mt-2 flex flex-wrap items-center gap-3 text-[12px] text-[var(--text-secondary)]">
-                <span>{report.country?.toUpperCase()}</span>
+                <span>{(report.country || '').toUpperCase()}</span>
                 <span>•</span>
                 <span>{new Date(report.createdAt).toLocaleDateString()}</span>
                 {report._id && (
@@ -610,16 +581,17 @@ export default function UnifiedReportDashboard() {
             </div>
 
             {/* ── KPI Strip ── */}
-            <KPICards report={report} config={config} />
+            <KPICards report={report} config={config} keywords={keywords} data={reportData} />
 
             {/* ── Charts ── */}
-            <ChartsSection
-              report={report}
-              config={config}
-              trendData={trendData}
-              trafficForecast={trafficForecast}
-              platformDistribution={platformDistribution}
-            />
+            {(trendData.length > 0 || trafficForecast.length > 0 || platformDistribution.length > 0) && (
+              <ChartsSection
+                config={config}
+                trendData={trendData}
+                trafficForecast={trafficForecast}
+                platformDistribution={platformDistribution}
+              />
+            )}
 
             {/* ── Keywords Table (SEO only) ── */}
             {report.type === 'seo' && keywords.length > 0 && (
@@ -649,7 +621,9 @@ export default function UnifiedReportDashboard() {
                           <td className="py-2 pr-3 font-sans text-[var(--text-primary)]">
                             {k.keyword}
                           </td>
-                          <td className="py-2 pr-3 text-right">{k.volume?.toLocaleString() || 'N/A'}</td>
+                          <td className="py-2 pr-3 text-right">
+                            {k.volume?.toLocaleString() || 'N/A'}
+                          </td>
                           <td className="py-2 pr-3 text-right">{k.kd || 'N/A'}</td>
                           <td className="py-2 pr-3 text-right">
                             {k.cpc ? `$${Number(k.cpc).toFixed(2)}` : 'N/A'}
@@ -680,40 +654,10 @@ export default function UnifiedReportDashboard() {
                   Copy
                 </Button>
               </div>
-              <article className="prose prose-invert max-w-none prose-headings:text-[var(--text-primary)] prose-headings:font-normal prose-p:text-[var(--text-secondary)] prose-strong:text-[var(--text-primary)] prose-a:text-[var(--accent-indigo)] prose-code:text-[var(--accent-emerald)] prose-table:text-[12px]">
+              <article className="prose prose-invert max-w-none prose-headings:font-normal prose-headings:text-[var(--text-primary)] prose-p:text-[var(--text-secondary)] prose-strong:text-[var(--text-primary)] prose-a:text-[var(--accent-indigo)] prose-code:text-[var(--accent-emerald)] prose-table:text-[12px]">
                 <ReactMarkdown>{report.markdown || ''}</ReactMarkdown>
               </article>
             </Card>
-
-            {/* ── Bottom Padding for Sticky Bar ── */}
-            <div className="h-20" />
-          </div>
-        </div>
-
-        {/* ── Sticky Bottom Bar ── */}
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border-subtle)] bg-[var(--bg-base)]/95 backdrop-blur-xl">
-          <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-6 py-3">
-            <p className="hidden text-[11px] text-[var(--text-muted)] md:block">
-              Generated by MusePRO · {new Date(report.createdAt).toLocaleDateString()}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleExportPDF} icon={<FileDown size={13} />}>
-                PDF
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowShareModal(true)}
-                icon={<Share2 size={13} />}
-              >
-                Share
-              </Button>
-              <Link href="/seo-report">
-                <Button variant="primary" size="sm">
-                  New Report
-                </Button>
-              </Link>
-            </div>
           </div>
         </div>
       </main>
@@ -829,19 +773,22 @@ export default function UnifiedReportDashboard() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// KPI CARDS COMPONENT
+// KPI CARDS
 // ═══════════════════════════════════════════════════════════════
-function KPICards({ report, config }: { report: any; config: any }) {
-  const data = report.data || {};
-  const keywords = report.keywords || [];
-
+function KPICards({
+  report,
+  config,
+  keywords,
+  data,
+}: {
+  report: any;
+  config: any;
+  keywords: any[];
+  data: any;
+}) {
   const kpis = useMemo(() => {
     const base = [
-      {
-        label: 'Report Type',
-        value: config.label.split(' ')[0],
-        accent: config.accent,
-      },
+      { label: 'Type', value: config.label.split(' ')[0], accent: config.accent },
     ];
 
     if (report.type === 'seo') {
@@ -857,16 +804,14 @@ function KPICards({ report, config }: { report: any; config: any }) {
         { label: 'Competitors', value: String(data.competitor_benchmark?.length || 0), accent: 'var(--accent-indigo)' }
       );
     } else if (report.type === 'technical_seo' || report.type === 'technical') {
-      const score = data.score || 0;
       base.push(
-        { label: 'Overall Score', value: `${score}/100`, accent: 'var(--accent-purple)' },
+        { label: 'Overall Score', value: `${data.score || 0}/100`, accent: 'var(--accent-purple)' },
         { label: 'Issues', value: String(data.issues_count || 0), accent: 'var(--accent-amber)' },
         { label: 'Passed', value: String(data.passed_count || 0), accent: 'var(--accent-emerald)' }
       );
     } else if (report.type === 'brand_protection' || report.type === 'brand') {
-      const riskScore = data.riskProfile?.riskScore || 0;
       base.push(
-        { label: 'Threat Score', value: `${riskScore}/100`, accent: 'var(--accent-red)' },
+        { label: 'Threat Score', value: `${data.riskProfile?.riskScore || 0}/100`, accent: 'var(--accent-red)' },
         { label: 'Findings', value: String(data.osintFindings?.length || 0), accent: 'var(--accent-amber)' },
         { label: 'Platforms', value: String(data.platformDistribution?.length || 0), accent: 'var(--accent-purple)' }
       );
@@ -887,10 +832,7 @@ function KPICards({ report, config }: { report: any; config: any }) {
             <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
               {kpi.label}
             </p>
-            <p
-              className="mt-2 font-mono text-[20px] font-medium"
-              style={{ color: kpi.accent }}
-            >
+            <p className="mt-2 font-mono text-[20px] font-medium" style={{ color: kpi.accent }}>
               {kpi.value}
             </p>
           </Card>
@@ -904,24 +846,14 @@ function KPICards({ report, config }: { report: any; config: any }) {
 // CHARTS SECTION
 // ═══════════════════════════════════════════════════════════════
 function ChartsSection({
-  report,
   config,
   trendData,
   trafficForecast,
   platformDistribution,
 }: any) {
-  const isCommand = config.layout === 'command';
-  const showTrend = trendData.length > 0;
-  const showForecast = trafficForecast.length > 0;
-  const showPlatforms = platformDistribution.length > 0;
-
-  if (!showTrend && !showForecast && !showPlatforms) {
-    return null;
-  }
-
   return (
     <div className="mb-6 grid grid-cols-1 gap-3 lg:grid-cols-2">
-      {showTrend && (
+      {trendData.length > 0 && (
         <Card padding="md">
           <h3 className="mb-3 text-[12px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
             12-Month Trend
@@ -957,7 +889,7 @@ function ChartsSection({
         </Card>
       )}
 
-      {showForecast && (
+      {trafficForecast.length > 0 && (
         <Card padding="md">
           <h3 className="mb-3 text-[12px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
             6-Month Forecast
@@ -987,7 +919,7 @@ function ChartsSection({
         </Card>
       )}
 
-      {showPlatforms && (
+      {platformDistribution.length > 0 && (
         <Card padding="md">
           <h3 className="mb-3 text-[12px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
             Platform Distribution
