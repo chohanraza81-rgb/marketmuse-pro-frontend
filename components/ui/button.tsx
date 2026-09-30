@@ -1,48 +1,51 @@
-import * as React from "react"
-import { Slot } from "@radix-ui/react-slot"
-import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "@/lib/utils"
+import { ButtonHTMLAttributes, forwardRef } from 'react';
+import { Loader2 } from 'lucide-react';
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-  {
-    variants: {
-      variant: {
-        default: "bg-accent text-white hover:bg-accent/90",
-        destructive: "bg-red-600 text-white hover:bg-red-700",
-        outline: "border border-border bg-transparent hover:bg-white/5 hover:text-white",
-        secondary: "bg-card text-white hover:bg-card/80",
-        ghost: "hover:bg-white/5",
-        link: "text-accent underline-offset-4 hover:underline",
-      },
-      size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-)
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type ButtonSize = 'sm' | 'md' | 'lg';
 
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
-  asChild?: boolean
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  loading?: boolean;
+  icon?: React.ReactNode;
 }
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button"
-    return (
-      <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
-    )
-  }
-)
-Button.displayName = "Button"
+const variantStyles: Record<ButtonVariant, string> = {
+  primary:
+    'bg-[var(--text-primary)] text-[var(--bg-base)] hover:opacity-90 disabled:opacity-50',
+  secondary:
+    'bg-[var(--bg-surface-2)] text-[var(--text-primary)] border border-[var(--border-default)] hover:bg-[var(--bg-surface-3)] disabled:opacity-50',
+  ghost:
+    'text-[var(--text-secondary)] hover:bg-[var(--bg-surface-1)] hover:text-[var(--text-primary)] disabled:opacity-50',
+  danger:
+    'bg-[var(--accent-red)] text-white hover:opacity-90 disabled:opacity-50',
+};
 
-export { Button, buttonVariants }
+const sizeStyles: Record<ButtonSize, string> = {
+  sm: 'px-2.5 py-1.5 text-[12px] gap-1.5',
+  md: 'px-3.5 py-2 text-[13px] gap-2',
+  lg: 'px-5 py-2.5 text-[14px] gap-2',
+};
+
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ variant = 'primary', size = 'md', loading, icon, children, className = '', disabled, ...props }, ref) => {
+    return (
+      <button
+        ref={ref}
+        disabled={disabled || loading}
+        className={`inline-flex items-center justify-center rounded-[4px] font-medium tracking-tight transition-all ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+        {...props}
+      >
+        {loading ? (
+          <Loader2 size={14} className="animate-spin" />
+        ) : (
+          icon
+        )}
+        {children}
+      </button>
+    );
+  }
+);
+
+Button.displayName = 'Button';
