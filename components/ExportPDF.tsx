@@ -1,7 +1,7 @@
 'use client';
 
 import { PDFDownloadLink, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import { FileDown } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════
@@ -85,21 +85,8 @@ const styles = StyleSheet.create({
 });
 
 // ═══════════════════════════════════════════════════════════════
-// PDF DOCUMENT COMPONENT
+// REPORT TYPE LABEL
 // ═══════════════════════════════════════════════════════════════
-interface PDFDocProps {
-  report: {
-    niche: string;
-    country: string;
-    type?: string;
-    markdown?: string;
-    clientName?: string;
-    _id?: string;
-    createdAt?: string;
-  };
-  agencyName?: string;
-}
-
 const getReportLabel = (type?: string): string => {
   switch (type) {
     case 'product':
@@ -116,8 +103,23 @@ const getReportLabel = (type?: string): string => {
   }
 };
 
+// ═══════════════════════════════════════════════════════════════
+// PDF DOCUMENT COMPONENT
+// ═══════════════════════════════════════════════════════════════
+interface PDFDocProps {
+  report: {
+    niche: string;
+    country: string;
+    type?: string;
+    markdown?: string;
+    clientName?: string;
+    _id?: string;
+    createdAt?: string;
+  };
+  agencyName?: string;
+}
+
 const PDFDoc = ({ report, agencyName = 'MusePRO' }: PDFDocProps) => {
-  // Split markdown into manageable lines (limit for PDF size)
   const markdownLines = (report.markdown || '')
     .split('\n')
     .filter((line) => line.trim())
@@ -142,14 +144,14 @@ const PDFDoc = ({ report, agencyName = 'MusePRO' }: PDFDocProps) => {
       subject={getReportLabel(report.type)}
     >
       <Page size="A4" style={styles.page}>
-        {/* ── Brand Header ── */}
+        {/* Brand Header */}
         <Text style={styles.brand}>{agencyName}</Text>
 
-        {/* ── Report Title ── */}
+        {/* Report Title */}
         <Text style={styles.header}>{report.niche}</Text>
         <Text style={styles.reportType}>{getReportLabel(report.type)}</Text>
 
-        {/* ── Meta Info ── */}
+        {/* Meta Info */}
         <View style={styles.metaRow}>
           <Text style={styles.metaLabel}>Country</Text>
           <Text style={styles.metaValue}>{report.country?.toUpperCase() || 'N/A'}</Text>
@@ -171,7 +173,7 @@ const PDFDoc = ({ report, agencyName = 'MusePRO' }: PDFDocProps) => {
           </View>
         )}
 
-        {/* ── Content Section ── */}
+        {/* Content Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Report Content</Text>
           {markdownLines.map((line, i) => (
@@ -181,7 +183,7 @@ const PDFDoc = ({ report, agencyName = 'MusePRO' }: PDFDocProps) => {
           ))}
         </View>
 
-        {/* ── Footer ── */}
+        {/* Footer */}
         <Text style={styles.footer}>
           {agencyName} • Confidential • {createdDate}
         </Text>
@@ -201,7 +203,9 @@ interface ExportPDFButtonProps {
 export const ExportPDFButton = ({ report, agencyName }: ExportPDFButtonProps) => {
   if (!report) return null;
 
-  const filename = `${(agencyName || 'MusePRO').replace(/\s+/g, '_')}_${report.niche?.replace(/\s+/g, '_') || 'Report'}.pdf`;
+  const filename = `${(agencyName || 'MusePRO').replace(/\s+/g, '_')}_${
+    report.niche?.replace(/\s+/g, '_') || 'Report'
+  }.pdf`;
 
   return (
     <PDFDownloadLink
