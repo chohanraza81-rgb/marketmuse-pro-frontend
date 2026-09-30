@@ -1,45 +1,78 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { toast } from 'sonner';
-import { Sparkles, Save, Palette, Type, Building2, Settings, ArrowRight, Globe, AtSign, FileText } from 'lucide-react';
-import LiveStatus from '@/components/LiveStatus';
+import { toast, Toaster } from 'sonner';
+import {
+  ArrowLeft, Save, Palette, Building2, Globe, AtSign,
+  Type, FileText, Eye, Loader2,
+} from 'lucide-react';
+import { motion } from 'framer-motion';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production.up.railway.app/api';
+import Navbar from '@/components/layout/Navbar';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/Card';
 
+// ═══════════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════════
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  'https://marketmuse-pro-backend-production-fd01.up.railway.app/api';
+
+interface Settings {
+  agencyName: string;
+  logoUrl: string;
+  tagline: string;
+  website: string;
+  primaryColor: string;
+  secondaryColor: string;
+  fontFamily: string;
+  pdfTheme: 'dark' | 'light';
+  footerText: string;
+  supportEmail: string;
+}
+
+const DEFAULT_SETTINGS: Settings = {
+  agencyName: '',
+  logoUrl: '',
+  tagline: '',
+  website: '',
+  primaryColor: '#533AFD',
+  secondaryColor: '#10B981',
+  fontFamily: 'Inter',
+  pdfTheme: 'dark',
+  footerText: '',
+  supportEmail: '',
+};
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════════
 export default function AgencySettingsPage() {
-  const pathname = usePathname();
-  
-  const [agencyName, setAgencyName] = useState('');
-  const [logoUrl, setLogoUrl] = useState('');
-  const [tagline, setTagline] = useState('');
-  const [website, setWebsite] = useState('');
-  const [primaryColor, setPrimaryColor] = useState('#6366F1');
-  const [secondaryColor, setSecondaryColor] = useState('#10B981');
-  const [fontFamily, setFontFamily] = useState('Inter');
-  const [pdfTheme, setPdfTheme] = useState('dark');
-  const [footerText, setFooterText] = useState('');
-  const [supportEmail, setSupportEmail] = useState('');
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // ── Fetch Settings ──
   useEffect(() => {
     const fetchSettings = async () => {
       try {
         const res = await fetch(`${API_URL}/agency-settings`);
         const data = await res.json();
         if (data) {
-          setAgencyName(data.agencyName || '');
-          setLogoUrl(data.logoUrl || '');
-          setTagline(data.tagline || '');
-          setWebsite(data.website || '');
-          setPrimaryColor(data.primaryColor || '#6366F1');
-          setSecondaryColor(data.secondaryColor || '#10B981');
-          setFontFamily(data.fontFamily || 'Inter');
-          setPdfTheme(data.pdfTheme || 'dark');
-          setFooterText(data.footerText || '');
-          setSupportEmail(data.supportEmail || '');
+          setSettings({
+            agencyName: data.agencyName || '',
+            logoUrl: data.logoUrl || '',
+            tagline: data.tagline || '',
+            website: data.website || '',
+            primaryColor: data.primaryColor || '#533AFD',
+            secondaryColor: data.secondaryColor || '#10B981',
+            fontFamily: data.fontFamily || 'Inter',
+            pdfTheme: data.pdfTheme || 'dark',
+            footerText: data.footerText || '',
+            supportEmail: data.supportEmail || '',
+          });
         }
       } catch {
         toast.error('Failed to load settings');
@@ -50,161 +83,383 @@ export default function AgencySettingsPage() {
     fetchSettings();
   }, []);
 
+  // ── Save Handler ──
   const handleSave = async () => {
     setSaving(true);
     try {
       const res = await fetch(`${API_URL}/agency-settings`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agencyName, logoUrl, tagline, website, primaryColor, secondaryColor, fontFamily, pdfTheme, footerText, supportEmail })
+        body: JSON.stringify(settings),
       });
       if (!res.ok) throw new Error('Failed to save');
-      toast.success('White-Label settings saved!');
-    } catch (err) {
-      if (err instanceof Error) toast.error(err.message);
-      else toast.error('An unexpected error occurred');
+      toast.success('White-label settings saved');
+    } catch (err: any) {
+      toast.error(err.message || 'Save failed');
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return <main className="min-h-screen bg-[#0A0A0A] flex items-center justify-center"><div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full" /></main>;
+  // ── Update Field ──
+  const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {
+    setSettings((prev) => ({ ...prev, [key]: value }));
+  };
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <main className="flex min-h-[80vh] items-center justify-center bg-[var(--bg-base)]">
+          <Loader2 size={24} className="animate-spin text-[var(--accent-indigo)]" />
+        </main>
+      </>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-[#0A0A0A] text-white font-['Inter'] relative overflow-hidden">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-[500px] bg-indigo-600/20 blur-[120px] pointer-events-none" />
+    <>
+      <Navbar />
 
-      <nav className="sticky top-0 z-50 bg-black/70 backdrop-blur-xl border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-              <Sparkles size={18} className="text-white" />
-            </div>
-            <span className="font-bold text-xl tracking-tight">Muse<span className="text-indigo-400">PRO</span></span>
+      <main className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[300px] bg-gradient-to-b from-[var(--accent-indigo)]/5 to-transparent" />
+
+        <div className="relative mx-auto max-w-6xl px-6 py-10">
+          {/* ── Exit Nav ── */}
+          <Link
+            href="/"
+            className="mb-6 inline-flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+          >
+            <ArrowLeft size={13} />
+            Back to Home
           </Link>
 
-          <div className="hidden md:flex items-center gap-1">
-            <Link href="/history" className={`px-4 py-2 text-sm ${pathname === '/history' ? 'text-white bg-white/10 rounded-lg' : 'text-neutral-400 hover:text-white transition-colors'}`}>History</Link>
-            <Link href="/compare" className={`px-4 py-2 text-sm ${pathname === '/compare' ? 'text-white bg-white/10 rounded-lg' : 'text-neutral-400 hover:text-white transition-colors'}`}>Compare</Link>
-            <Link href="/product-research" className={`px-4 py-2 text-sm ${pathname === '/product-research' ? 'text-white bg-white/10 rounded-lg' : 'text-neutral-400 hover:text-white transition-colors'}`}>Product</Link>
-            <Link href="/seo-report" className={`px-4 py-2 text-sm ${pathname === '/seo-report' ? 'text-white bg-white/10 rounded-lg' : 'text-neutral-400 hover:text-white transition-colors'}`}>SEO</Link>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <LiveStatus />
-            <Link href="/agency-settings" className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium ${pathname === '/agency-settings' ? 'bg-indigo-600 text-white' : 'bg-white/5 border border-white/10 hover:bg-white/10'}`}>
-              <Settings size={16} /> Agency
-            </Link>
-            <Link href="/seo-report" className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-sm font-semibold shadow-lg shadow-indigo-500/20">
-              Get Started <ArrowRight size={16} />
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      <div className="max-w-6xl mx-auto px-6 py-12 relative z-10">
-        <h1 className="text-3xl font-bold mb-8 bg-gradient-to-r from-white to-neutral-400 bg-clip-text text-transparent">White-Label Studio</h1>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Settings Form */}
-          <div className="space-y-5 p-6 rounded-2xl bg-[#0F0F14] border border-neutral-800">
-            <div className="flex items-center gap-2">
-              <Building2 size={20} className="text-indigo-400" />
-              <h2 className="text-xl font-semibold">Agency Details</h2>
-            </div>
+          {/* ── Header ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="mb-10 flex flex-wrap items-end justify-between gap-4"
+          >
             <div>
-              <label className="text-sm text-neutral-400 block mb-2">Agency Name</label>
-              <input type="text" value={agencyName} onChange={(e) => setAgencyName(e.target.value)} className="w-full p-3 rounded-xl bg-[#0A0A0A] border border-neutral-800 focus:border-indigo-500 outline-none" />
-            </div>
-            <div>
-              <label className="text-sm text-neutral-400 block mb-2">Tagline</label>
-              <input type="text" value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="Premium Market Intelligence" className="w-full p-3 rounded-xl bg-[#0A0A0A] border border-neutral-800 focus:border-indigo-500 outline-none" />
-            </div>
-            <div>
-              <label className="text-sm text-neutral-400 block mb-2">Logo URL</label>
-              <input type="text" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://youragency.com/logo.png" className="w-full p-3 rounded-xl bg-[#0A0A0A] border border-neutral-800 focus:border-indigo-500 outline-none" />
-            </div>
-            <div>
-              <label className="text-sm text-neutral-400 block mb-2">Website</label>
-              <div className="relative">
-                <Globe size={16} className="absolute left-3 top-3 text-neutral-500" />
-                <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://youragency.com" className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#0A0A0A] border border-neutral-800 focus:border-indigo-500 outline-none" />
+              <div className="mb-3 inline-flex items-center gap-2 rounded-[4px] border border-[var(--border-default)] bg-[var(--bg-surface-1)] px-3 py-1.5">
+                <Building2 size={12} className="text-[var(--accent-indigo)]" />
+                <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-secondary)]">
+                  White-Label Studio
+                </span>
               </div>
+              <h1 className="text-[32px] font-normal leading-tight tracking-[-0.02em] text-[var(--text-primary)] md:text-[40px]">
+                Agency Settings
+              </h1>
+              <p className="mt-3 max-w-xl text-[14px] leading-relaxed text-[var(--text-secondary)]">
+                Customize reports with your agency branding. Applied automatically to all future PDF exports.
+              </p>
             </div>
-            <div>
-              <label className="text-sm text-neutral-400 block mb-2">Support Email</label>
-              <div className="relative">
-                <AtSign size={16} className="absolute left-3 top-3 text-neutral-500" />
-                <input type="email" value={supportEmail} onChange={(e) => setSupportEmail(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#0A0A0A] border border-neutral-800 focus:border-indigo-500 outline-none" />
-              </div>
-            </div>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={handleSave}
+              loading={saving}
+              icon={!saving ? <Save size={14} /> : undefined}
+            >
+              {saving ? 'Saving...' : 'Save Settings'}
+            </Button>
+          </motion.div>
 
-            <div className="flex items-center gap-2 mt-4">
-              <Palette size={20} className="text-emerald-400" />
-              <h2 className="text-xl font-semibold">Branding & Theme</h2>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm text-neutral-400 block mb-2">Primary Color</label>
-                <input type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="w-full h-12 rounded-xl bg-[#0A0A0A] border border-neutral-800 cursor-pointer" />
-              </div>
-              <div>
-                <label className="text-sm text-neutral-400 block mb-2">Secondary Color</label>
-                <input type="color" value={secondaryColor} onChange={(e) => setSecondaryColor(e.target.value)} className="w-full h-12 rounded-xl bg-[#0A0A0A] border border-neutral-800 cursor-pointer" />
-              </div>
-            </div>
-            
-            <div>
-              <label className="text-sm text-neutral-400 block mb-2">Font Style</label>
-              <select value={fontFamily} onChange={(e) => setFontFamily(e.target.value)} className="w-full p-3 rounded-xl bg-[#0A0A0A] border border-neutral-800 focus:border-indigo-500 outline-none">
-                <option value="Inter">Inter (Modern)</option>
-                <option value="Times New Roman">Serif (Classic)</option>
-                <option value="Courier New">Monospace (Tech)</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="text-sm text-neutral-400 block mb-2">PDF Theme</label>
-              <select value={pdfTheme} onChange={(e) => setPdfTheme(e.target.value)} className="w-full p-3 rounded-xl bg-[#0A0A0A] border border-neutral-800 focus:border-indigo-500 outline-none">
-                <option value="dark">Dark (Premium)</option>
-                <option value="light">Light (Corporate)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-sm text-neutral-400 block mb-2">Footer Text</label>
-              <textarea value={footerText} onChange={(e) => setFooterText(e.target.value)} rows={2} className="w-full p-3 rounded-xl bg-[#0A0A0A] border border-neutral-800 focus:border-indigo-500 outline-none" />
-            </div>
-
-            <button onClick={handleSave} disabled={saving} className="w-full p-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-semibold transition-all flex items-center justify-center gap-2">
-              {saving ? 'Saving...' : <><Save size={20} /> Save White-Label Settings</>}
-            </button>
-          </div>
-
-          {/* Live Preview */}
-          <div className="p-6 rounded-2xl bg-[#0F0F14] border border-neutral-800">
-            <div className="flex items-center gap-2 mb-4">
-              <FileText size={20} className="text-purple-400" />
-              <h2 className="text-xl font-semibold">Live Preview</h2>
-            </div>
-            <div className="p-6 rounded-xl border border-neutral-700" style={{ background: pdfTheme === 'dark' ? '#111' : '#fff', fontFamily }}>
-              <div className="flex items-center gap-3 mb-4">
-                {logoUrl && <img src={logoUrl} alt="Logo" className="w-10 h-10 object-contain rounded" />}
-                <div>
-                  <h1 className="text-xl font-bold" style={{ color: pdfTheme === 'dark' ? '#fff' : '#000' }}>{agencyName}</h1>
-                  {tagline && <p className="text-xs" style={{ color: primaryColor }}>{tagline}</p>}
+          {/* ── Two-Column Layout ── */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+            {/* ── LEFT: Settings Form ── */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+              className="space-y-6"
+            >
+              {/* Agency Details */}
+              <Card padding="lg">
+                <div className="mb-5 flex items-center gap-2">
+                  <Building2 size={14} className="text-[var(--accent-indigo)]" />
+                  <h2 className="text-[14px] font-medium text-[var(--text-primary)]">
+                    Agency Details
+                  </h2>
                 </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                      Agency Name
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.agencyName}
+                      onChange={(e) => update('agencyName', e.target.value)}
+                      placeholder="Your Agency Name"
+                      className="w-full rounded-[4px] border border-[var(--border-default)] bg-[var(--bg-surface-2)] px-3 py-2 text-[13px] text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--accent-indigo)]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                      Tagline
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.tagline}
+                      onChange={(e) => update('tagline', e.target.value)}
+                      placeholder="Premium Market Intelligence"
+                      className="w-full rounded-[4px] border border-[var(--border-default)] bg-[var(--bg-surface-2)] px-3 py-2 text-[13px] text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--accent-indigo)]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                      Logo URL
+                    </label>
+                    <input
+                      type="url"
+                      value={settings.logoUrl}
+                      onChange={(e) => update('logoUrl', e.target.value)}
+                      placeholder="https://youragency.com/logo.png"
+                      className="w-full rounded-[4px] border border-[var(--border-default)] bg-[var(--bg-surface-2)] px-3 py-2 text-[13px] text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--accent-indigo)]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                        <Globe size={10} className="mr-1 inline" /> Website
+                      </label>
+                      <input
+                        type="url"
+                        value={settings.website}
+                        onChange={(e) => update('website', e.target.value)}
+                        placeholder="https://youragency.com"
+                        className="w-full rounded-[4px] border border-[var(--border-default)] bg-[var(--bg-surface-2)] px-3 py-2 text-[13px] text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--accent-indigo)]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                        <AtSign size={10} className="mr-1 inline" /> Support Email
+                      </label>
+                      <input
+                        type="email"
+                        value={settings.supportEmail}
+                        onChange={(e) => update('supportEmail', e.target.value)}
+                        placeholder="hello@youragency.com"
+                        className="w-full rounded-[4px] border border-[var(--border-default)] bg-[var(--bg-surface-2)] px-3 py-2 text-[13px] text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--accent-indigo)]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Branding */}
+              <Card padding="lg">
+                <div className="mb-5 flex items-center gap-2">
+                  <Palette size={14} className="text-[var(--accent-emerald)]" />
+                  <h2 className="text-[14px] font-medium text-[var(--text-primary)]">
+                    Branding & Theme
+                  </h2>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                        Primary Color
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={settings.primaryColor}
+                          onChange={(e) => update('primaryColor', e.target.value)}
+                          className="h-10 w-12 cursor-pointer rounded-[4px] border border-[var(--border-default)] bg-[var(--bg-surface-2)]"
+                        />
+                        <input
+                          type="text"
+                          value={settings.primaryColor}
+                          onChange={(e) => update('primaryColor', e.target.value)}
+                          className="flex-1 rounded-[4px] border border-[var(--border-default)] bg-[var(--bg-surface-2)] px-3 py-2 font-mono text-[12px] text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--accent-indigo)]"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                        Secondary Color
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={settings.secondaryColor}
+                          onChange={(e) => update('secondaryColor', e.target.value)}
+                          className="h-10 w-12 cursor-pointer rounded-[4px] border border-[var(--border-default)] bg-[var(--bg-surface-2)]"
+                        />
+                        <input
+                          type="text"
+                          value={settings.secondaryColor}
+                          onChange={(e) => update('secondaryColor', e.target.value)}
+                          className="flex-1 rounded-[4px] border border-[var(--border-default)] bg-[var(--bg-surface-2)] px-3 py-2 font-mono text-[12px] text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--accent-indigo)]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                        <Type size={10} className="mr-1 inline" /> Font Style
+                      </label>
+                      <select
+                        value={settings.fontFamily}
+                        onChange={(e) => update('fontFamily', e.target.value)}
+                        className="w-full rounded-[4px] border border-[var(--border-default)] bg-[var(--bg-surface-2)] px-3 py-2 text-[13px] text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--accent-indigo)]"
+                      >
+                        <option value="Inter">Inter (Modern)</option>
+                        <option value="Times New Roman">Serif (Classic)</option>
+                        <option value="Courier New">Monospace (Tech)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                        PDF Theme
+                      </label>
+                      <select
+                        value={settings.pdfTheme}
+                        onChange={(e) => update('pdfTheme', e.target.value as 'dark' | 'light')}
+                        className="w-full rounded-[4px] border border-[var(--border-default)] bg-[var(--bg-surface-2)] px-3 py-2 text-[13px] text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--accent-indigo)]"
+                      >
+                        <option value="dark">Dark (Premium)</option>
+                        <option value="light">Light (Corporate)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                      <FileText size={10} className="mr-1 inline" /> Footer Text
+                    </label>
+                    <textarea
+                      value={settings.footerText}
+                      onChange={(e) => update('footerText', e.target.value)}
+                      rows={2}
+                      placeholder="Confidential — Prepared by Your Agency"
+                      className="w-full resize-none rounded-[4px] border border-[var(--border-default)] bg-[var(--bg-surface-2)] px-3 py-2 text-[13px] text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--accent-indigo)]"
+                    />
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+
+            {/* ── RIGHT: Live Preview ── */}
+            <motion.aside
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+              className="lg:sticky lg:top-20 lg:self-start"
+            >
+              <div className="mb-3 flex items-center gap-2">
+                <Eye size={12} className="text-[var(--text-muted)]" />
+                <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                  Live Preview
+                </span>
               </div>
-              <div className="space-y-2">
-                <div className="h-2 w-1/2 rounded" style={{ background: primaryColor }}></div>
-                <div className="h-2 w-3/4 rounded bg-neutral-600"></div>
-                <div className="h-2 w-1/3 rounded bg-neutral-600"></div>
+
+              <div
+                className="rounded-[6px] border border-[var(--border-default)] p-6"
+                style={{
+                  background: settings.pdfTheme === 'dark' ? '#0F0F14' : '#FFFFFF',
+                  fontFamily: settings.fontFamily,
+                }}
+              >
+                {/* Logo + Agency Name */}
+                <div className="mb-5 flex items-center gap-3">
+                  {settings.logoUrl ? (
+                    <img
+                      src={settings.logoUrl}
+                      alt="Logo"
+                      className="h-10 w-10 rounded-[4px] object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div
+                      className="flex h-10 w-10 items-center justify-center rounded-[4px] text-[14px] font-medium"
+                      style={{
+                        background: settings.primaryColor,
+                        color: '#fff',
+                      }}
+                    >
+                      {(settings.agencyName || 'A').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <h3
+                      className="text-[14px] font-medium"
+                      style={{
+                        color: settings.pdfTheme === 'dark' ? '#E6EDF3' : '#111',
+                      }}
+                    >
+                      {settings.agencyName || 'Your Agency Name'}
+                    </h3>
+                    {settings.tagline && (
+                      <p className="text-[11px]" style={{ color: settings.primaryColor }}>
+                        {settings.tagline}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Sample Content */}
+                <div className="space-y-2">
+                  <div
+                    className="h-1.5 w-1/2 rounded-full"
+                    style={{ background: settings.primaryColor }}
+                  />
+                  <div
+                    className="h-1.5 w-3/4 rounded-full"
+                    style={{
+                      background:
+                        settings.pdfTheme === 'dark' ? '#2E2E33' : '#E5E7EB',
+                    }}
+                  />
+                  <div
+                    className="h-1.5 w-1/3 rounded-full"
+                    style={{
+                      background:
+                        settings.pdfTheme === 'dark' ? '#2E2E33' : '#E5E7EB',
+                    }}
+                  />
+                  <div
+                    className="h-1.5 w-2/3 rounded-full"
+                    style={{ background: settings.secondaryColor }}
+                  />
+                </div>
+
+                {/* Footer */}
+                <p
+                  className="mt-6 border-t pt-3 text-[10px]"
+                  style={{
+                    color: settings.pdfTheme === 'dark' ? '#6B7280' : '#9CA3AF',
+                    borderColor: settings.pdfTheme === 'dark' ? '#232326' : '#E5E7EB',
+                  }}
+                >
+                  {settings.footerText || 'Footer text will appear here'}
+                </p>
               </div>
-              <p className="text-xs mt-4" style={{ color: pdfTheme === 'dark' ? '#888' : '#666' }}>{footerText}</p>
-            </div>
+
+              <p className="mt-3 text-[11px] leading-relaxed text-[var(--text-muted)]">
+                Live preview updates as you edit. Applied to all future PDF exports.
+              </p>
+            </motion.aside>
           </div>
         </div>
-      </div>
-    </main>
+      </main>
+
+      <Toaster richColors position="top-right" />
+    </>
   );
 }
