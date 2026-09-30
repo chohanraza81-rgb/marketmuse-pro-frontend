@@ -1,32 +1,96 @@
 'use client';
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { toast } from 'sonner';
-import { 
-  Loader2, LayoutDashboard, TrendingUp, FileText, Gauge, 
-  Search, ArrowRight, Sparkles
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production.up.railway.app/api';
+import { useEffect, useState, useMemo } from 'react';
+import Link from 'next/link';
+import { toast, Toaster } from 'sonner';
+import {
+  Search, TrendingUp, Package, Gauge, Shield,
+  ArrowRight, Loader2, LayoutDashboard, ArrowLeft,
+  Sparkles, FileText,
+} from 'lucide-react';
+import { motion } from 'framer-motion';
+
+import Navbar from '@/components/layout/Navbar';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+
+// ═══════════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════════
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  'https://marketmuse-pro-backend-production-fd01.up.railway.app/api';
 
 const countryFlags: Record<string, string> = {
   us: '🇺🇸', gb: '🇬🇧', ca: '🇨🇦', au: '🇦🇺', de: '🇩🇪', sg: '🇸🇬',
-  sa: '🇸🇦', ae: '🇦🇪', pk: '🇵🇰', in: '🇮🇳', tr: '🇹🇷', my: '🇲🇾'
+  sa: '🇸🇦', ae: '🇦🇪', pk: '🇵🇰', in: '🇮🇳', tr: '🇹🇷', my: '🇲🇾',
 };
 
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+const isTechnicalSEO = (r: any) =>
+  r.type === 'technical_seo' ||
+  r.type === 'technical' ||
+  (r.type === 'seo' && (r.data?.subtype === 'technical' || r.data?.subtype === 'technical-business'));
+
+const isBrandProtection = (r: any) =>
+  r.type === 'brand_protection' || r.type === 'brand';
+
+const getTypeInfo = (r: any) => {
+  if (isBrandProtection(r)) {
+    return {
+      label: 'Brand Protection',
+      icon: Shield,
+      accent: '#F85149',
+      badge: 'critical' as const,
+      bg: 'rgba(248,81,73,0.1)',
+    };
+  }
+  if (isTechnicalSEO(r)) {
+    return {
+      label: 'Technical SEO',
+      icon: Gauge,
+      accent: '#A855F7',
+      badge: 'purple' as const,
+      bg: 'rgba(168,85,247,0.1)',
+    };
+  }
+  if (r.type === 'product') {
+    return {
+      label: 'Product Intelligence',
+      icon: Package,
+      accent: '#10B981',
+      badge: 'emerald' as const,
+      bg: 'rgba(16,185,129,0.1)',
+    };
+  }
+  return {
+    label: 'SEO Research',
+    icon: TrendingUp,
+    accent: '#533AFD',
+    badge: 'indigo' as const,
+    bg: 'rgba(83,58,253,0.1)',
+  };
+};
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════════
 export default function DashboardPage() {
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // ── Fetch Reports ──
   useEffect(() => {
     const fetchReports = async () => {
       try {
         const res = await fetch(`${API_URL}/reports?limit=50`);
         const data = await res.json();
         setReports(data.reports || []);
-      } catch (err) {
+      } catch {
         toast.error('Failed to load reports');
       } finally {
         setLoading(false);
@@ -35,123 +99,213 @@ export default function DashboardPage() {
     fetchReports();
   }, []);
 
-  const filteredReports = reports.filter((r) => 
-    !searchQuery || r.niche.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // ── Filtered Reports ──
+  const filteredReports = useMemo(() => {
+    if (!searchQuery) return reports;
+    return reports.filter((r) =>
+      r.niche.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [reports, searchQuery]);
 
-  if (loading) return (
-    <main className="min-h-screen bg-[#0A0A0F] flex items-center justify-center">
-      <div className="text-center">
-        <Loader2 size={48} className="animate-spin text-indigo-400 mx-auto mb-4" />
-        <p className="text-neutral-400">Loading dashboards...</p>
-      </div>
-    </main>
-  );
+  // ── Stats ──
+  const stats = useMemo(() => {
+    const total = reports.length;
+    const seo = reports.filter((r) => r.type === 'seo' && !isTechnicalSEO(r)).length;
+    const product = reports.filter((r) => r.type === 'product').length;
+    const tech = reports.filter(isTechnicalSEO).length;
+    const brand = reports.filter(isBrandProtection).length;
+    return { total, seo, product, tech, brand };
+  }, [reports]);
 
+  // ═══════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════
   return (
-    <main className="min-h-screen bg-[#0A0A0F] text-white font-['Inter'] relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-br from-indigo-600/20 via-purple-600/10 to-transparent blur-3xl pointer-events-none" />
+    <>
+      <Navbar />
 
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-              <Sparkles size={18} className="text-white" />
-            </div>
-            <span className="font-bold text-xl tracking-tight">Muse<span className="text-indigo-400">PRO</span></span>
+      <main className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]">
+        {/* Subtle top glow */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[300px] bg-gradient-to-b from-[var(--accent-indigo)]/5 to-transparent" />
+
+        <div className="relative mx-auto max-w-7xl px-6 py-10">
+          {/* ── Exit Nav ── */}
+          <Link
+            href="/"
+            className="mb-6 inline-flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+          >
+            <ArrowLeft size={13} />
+            Back to Home
           </Link>
 
-          <div className="hidden md:flex items-center gap-1">
-            <Link href="/" className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors rounded-lg hover:bg-white/5">Home</Link>
-            <Link href="/dashboard" className="px-4 py-2 text-sm text-white bg-indigo-600 hover:bg-indigo-500 transition-colors rounded-lg">Dashboard</Link>
-            <Link href="/history" className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors rounded-lg hover:bg-white/5">History</Link>
-            <Link href="/seo-report" className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors rounded-lg hover:bg-white/5">SEO</Link>
-            <Link href="/product-research" className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors rounded-lg hover:bg-white/5">Product</Link>
-            <Link href="/technical-seo" className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors rounded-lg hover:bg-white/5">Tech SEO</Link>
-          </div>
-        </div>
-      </nav>
+          {/* ── Header ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="mb-8"
+          >
+            <div className="mb-3 inline-flex items-center gap-2 rounded-[4px] border border-[var(--border-default)] bg-[var(--bg-surface-1)] px-3 py-1.5">
+              <LayoutDashboard size={12} className="text-[var(--accent-indigo)]" />
+              <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-secondary)]">
+                Client Dashboards
+              </span>
+            </div>
+            <h1 className="text-[32px] font-normal leading-tight tracking-[-0.02em] text-[var(--text-primary)] md:text-[40px]">
+              Visual Reports
+            </h1>
+            <p className="mt-2 text-[14px] text-[var(--text-secondary)]">
+              Interactive charts, PDF export, and shareable links for your clients.
+            </p>
+          </motion.div>
 
-      <div className="max-w-7xl mx-auto px-6 py-12 relative z-10">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-6">
-            <LayoutDashboard size={14} className="text-indigo-400" />
-            <span className="text-xs uppercase tracking-widest text-neutral-300">Client Dashboards</span>
-          </div>
-          <h1 className="text-5xl md:text-6xl font-black tracking-tight bg-gradient-to-b from-white to-neutral-400 bg-clip-text text-transparent">
-            Visual Reports
-          </h1>
-          <p className="mt-4 text-lg text-neutral-400 max-w-2xl mx-auto">
-            Interactive charts, PDF export, email sharing, and shareable links for your clients.
-          </p>
-        </div>
-
-        {/* Search */}
-        <div className="max-w-xl mx-auto mb-12">
-          <div className="relative">
-            <Search size={18} className="absolute left-4 top-3.5 text-neutral-500" />
-            <input
-              type="text"
-              placeholder="Search reports..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white/[0.03] border border-white/10 focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 outline-none text-white placeholder:text-neutral-500 transition-all backdrop-blur-xl"
-            />
-          </div>
-        </div>
-
-        {/* Reports Grid */}
-        {filteredReports.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="text-6xl mb-4">📊</div>
-            <p className="text-xl font-semibold text-neutral-400">No dashboards available</p>
-            <p className="text-neutral-500 mt-2">Create a report first to view its dashboard.</p>
-            <Link href="/seo-report" className="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 font-semibold transition-all">
-              Create Report <ArrowRight size={16} />
-            </Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <AnimatePresence>
-              {filteredReports.map((r, i) => (
-                <motion.div
-                  key={r._id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                >
-                  <Link 
-                    href={`/dashboard/${r._id}`}
-                    className="block p-6 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-xl hover:bg-white/[0.06] hover:border-indigo-500/30 hover:shadow-lg hover:shadow-indigo-500/10 transition-all group h-full"
+          {/* ── Stats Row ── */}
+          <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-5">
+            {[
+              { label: 'Total', value: stats.total, accent: 'var(--text-primary)' },
+              { label: 'SEO', value: stats.seo, accent: 'var(--accent-indigo)' },
+              { label: 'Product', value: stats.product, accent: 'var(--accent-emerald)' },
+              { label: 'Tech SEO', value: stats.tech, accent: 'var(--accent-purple)' },
+              { label: 'Brand', value: stats.brand, accent: 'var(--accent-red)' },
+            ].map((stat, i) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+              >
+                <Card padding="md">
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                    {stat.label}
+                  </p>
+                  <p
+                    className="mt-2 font-mono text-[24px] font-medium leading-none"
+                    style={{ color: stat.accent }}
                   >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className={`p-3 rounded-xl ${
-                        r.type === 'product' 
-                          ? 'bg-emerald-500/10 text-emerald-400' 
-                          : r.data?.subtype === 'technical'
-                            ? 'bg-orange-500/10 text-orange-400'
-                            : 'bg-indigo-500/10 text-indigo-400'
-                      }`}>
-                        {r.type === 'product' ? <FileText size={20} /> : r.data?.subtype === 'technical' ? <Gauge size={20} /> : <TrendingUp size={20} />}
-                      </div>
-                      <ArrowRight size={18} className="text-neutral-600 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" />
-                    </div>
-                    <h3 className="font-bold text-lg mb-2 group-hover:text-white transition-colors">{r.niche}</h3>
-                    <div className="flex items-center gap-2 text-sm text-neutral-500">
-                      <span>{countryFlags[r.country] || '🌍'}</span>
-                      <span>{r.country?.toUpperCase()}</span>
-                      <span>•</span>
-                      <span>{new Date(r.createdAt).toLocaleDateString()}</span>
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+                    {stat.value}
+                  </p>
+                </Card>
+              </motion.div>
+            ))}
           </div>
-        )}
-      </div>
-    </main>
+
+          {/* ── Search ── */}
+          <div className="mb-6">
+            <div className="relative max-w-md">
+              <Search
+                size={14}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+              />
+              <input
+                type="text"
+                placeholder="Search reports by niche..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-[4px] border border-[var(--border-default)] bg-[var(--bg-surface-1)] py-2.5 pl-9 pr-3 text-[13px] text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--accent-indigo)]"
+              />
+            </div>
+          </div>
+
+          {/* ── Reports Grid ── */}
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 size={24} className="animate-spin text-[var(--accent-indigo)]" />
+            </div>
+          ) : filteredReports.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="rounded-[6px] border border-[var(--border-default)] bg-[var(--bg-surface-1)] py-20 text-center"
+            >
+              <div className="mb-4 text-5xl">📊</div>
+              <p className="text-[16px] font-medium text-[var(--text-primary)]">
+                {searchQuery ? 'No matching reports' : 'No reports yet'}
+              </p>
+              <p className="mt-1 text-[13px] text-[var(--text-secondary)]">
+                {searchQuery
+                  ? 'Try a different search term'
+                  : 'Create your first intelligence report to get started'}
+              </p>
+              {!searchQuery && (
+                <Link href="/seo-report">
+                  <Button
+                    variant="primary"
+                    size="md"
+                    className="mt-6"
+                    icon={<Sparkles size={14} />}
+                  >
+                    Create First Report
+                  </Button>
+                </Link>
+              )}
+            </motion.div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {filteredReports.map((r, i) => {
+                const info = getTypeInfo(r);
+                const Icon = info.icon;
+                return (
+                  <motion.div
+                    key={r._id}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.03 }}
+                  >
+                    <Link href={`/dashboard/${r._id}`} className="block h-full">
+                      <Card
+                        padding="lg"
+                        className="group relative h-full overflow-hidden transition-all hover:border-[var(--border-strong)] hover:bg-[var(--bg-surface-2)]"
+                      >
+                        {/* Left accent bar */}
+                        <div
+                          className="absolute left-0 top-0 h-full w-[3px] opacity-0 transition-opacity group-hover:opacity-100"
+                          style={{ background: info.accent }}
+                        />
+
+                        {/* Icon + Arrow */}
+                        <div className="mb-4 flex items-start justify-between">
+                          <div
+                            className="flex h-10 w-10 items-center justify-center rounded-[4px]"
+                            style={{ background: info.bg }}
+                          >
+                            <Icon size={18} style={{ color: info.accent }} />
+                          </div>
+                          <ArrowRight
+                            size={14}
+                            className="text-[var(--text-muted)] transition-all group-hover:translate-x-0.5 group-hover:text-[var(--text-primary)]"
+                          />
+                        </div>
+
+                        {/* Badge */}
+                        <div className="mb-3">
+                          <Badge variant={info.badge} size="sm">
+                            {info.label}
+                          </Badge>
+                        </div>
+
+                        {/* Title */}
+                        <h3 className="mb-3 text-[15px] font-medium leading-snug text-[var(--text-primary)] transition-colors group-hover:text-white">
+                          {r.niche}
+                        </h3>
+
+                        {/* Meta */}
+                        <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
+                          <span>{countryFlags[r.country] || '🌍'}</span>
+                          <span>{(r.country || '').toUpperCase()}</span>
+                          <span>·</span>
+                          <span>{new Date(r.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      </Card>
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </main>
+
+      <Toaster richColors position="top-right" />
+    </>
   );
 }
