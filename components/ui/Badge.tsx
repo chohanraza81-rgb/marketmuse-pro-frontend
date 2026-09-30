@@ -1,7 +1,13 @@
 import { ReactNode } from 'react';
 
+// ═══════════════════════════════════════════════════════════════
+// BADGE VARIANTS
+// ═══════════════════════════════════════════════════════════════
 type BadgeVariant =
   | 'default'
+  | 'indigo'
+  | 'purple'
+  | 'emerald'
   | 'success'
   | 'warning'
   | 'danger'
@@ -18,9 +24,18 @@ interface BadgeProps {
   dot?: boolean;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// VARIANT STYLES
+// ═══════════════════════════════════════════════════════════════
 const variantStyles: Record<BadgeVariant, string> = {
   default:
     'bg-[var(--bg-surface-3)] text-[var(--text-secondary)] border-[var(--border-default)]',
+  indigo:
+    'bg-[var(--accent-indigo)]/10 text-[var(--accent-indigo)] border-[var(--accent-indigo)]/20',
+  purple:
+    'bg-[var(--accent-purple)]/10 text-[var(--accent-purple)] border-[var(--accent-purple)]/20',
+  emerald:
+    'bg-[var(--accent-emerald)]/10 text-[var(--accent-emerald)] border-[var(--accent-emerald)]/20',
   success:
     'bg-[var(--accent-emerald)]/10 text-[var(--accent-emerald)] border-[var(--accent-emerald)]/20',
   warning:
@@ -44,6 +59,9 @@ const sizeStyles = {
   md: 'px-2 py-0.5 text-[11px]',
 };
 
+// ═══════════════════════════════════════════════════════════════
+// BADGE COMPONENT
+// ═══════════════════════════════════════════════════════════════
 export function Badge({
   children,
   variant = 'default',
@@ -54,10 +72,10 @@ export function Badge({
     <span
       className={`inline-flex items-center gap-1 rounded-[3px] border font-medium uppercase tracking-wide ${variantStyles[variant]} ${sizeStyles[size]}`}
     >
-      {dot && (
-        <span className="h-1.5 w-1.5 rounded-full bg-current pulse-dot" />
-      )}
+      {dot && <span className="h-1.5 w-1.5 rounded-full bg-current pulse-dot" />}
       {children}
     </span>
   );
 }
+
+export type { BadgeVariant };
