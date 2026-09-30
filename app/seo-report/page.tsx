@@ -8,11 +8,13 @@ import { Search, ArrowRight, TrendingUp, CheckCircle2 } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 
 import Navbar from '@/components/layout/Navbar';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/Card';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://marketmuse-pro-backend-production.up.railway.app/api';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  'https://marketmuse-pro-backend-production.up.railway.app/api';
 
 const countries = [
   { code: 'us', name: 'United States', flag: '🇺🇸' },
@@ -56,7 +58,9 @@ export default function SEOReportPage() {
   useEffect(() => {
     if (!loading) return;
     const interval = setInterval(() => {
-      setProgressStep((prev) => (prev < progressMessages.length - 1 ? prev + 1 : prev));
+      setProgressStep((prev) =>
+        prev < progressMessages.length - 1 ? prev + 1 : prev
+      );
     }, 1800);
     return () => clearInterval(interval);
   }, [loading]);
@@ -136,7 +140,8 @@ export default function SEOReportPage() {
               Generate SEO intelligence
             </h1>
             <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-[var(--text-secondary)]">
-              Enter your target niche and market. We'll analyze 50 keywords, benchmark competitors, and deliver a complete growth strategy.
+              Enter your target niche and market. We'll analyze 50 keywords,
+              benchmark competitors, and deliver a complete growth strategy.
             </p>
           </motion.div>
 
@@ -153,7 +158,8 @@ export default function SEOReportPage() {
                   {/* Niche Input */}
                   <div>
                     <label className="mb-2 block text-[12px] font-medium uppercase tracking-wider text-[var(--text-secondary)]">
-                      Niche / Topic <span className="text-[var(--accent-red)]">*</span>
+                      Niche / Topic{' '}
+                      <span className="text-[var(--accent-red)]">*</span>
                     </label>
                     <div className="relative">
                       <Search
@@ -178,7 +184,8 @@ export default function SEOReportPage() {
                   {/* Country Selector */}
                   <div>
                     <label className="mb-2 block text-[12px] font-medium uppercase tracking-wider text-[var(--text-secondary)]">
-                      Target Country <span className="text-[var(--accent-red)]">*</span>
+                      Target Country{' '}
+                      <span className="text-[var(--accent-red)]">*</span>
                     </label>
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                       {countries.map((c) => (
@@ -250,15 +257,21 @@ export default function SEOReportPage() {
                 <div className="mt-2 space-y-1.5">
                   <p className="flex items-center justify-between text-[12px]">
                     <span className="text-[var(--text-secondary)]">SERP</span>
-                    <span className="font-mono text-[var(--text-muted)]">SerpAPI</span>
+                    <span className="font-mono text-[var(--text-muted)]">
+                      SerpAPI
+                    </span>
                   </p>
                   <p className="flex items-center justify-between text-[12px]">
                     <span className="text-[var(--text-secondary)]">Keywords</span>
-                    <span className="font-mono text-[var(--text-muted)]">DataForSEO</span>
+                    <span className="font-mono text-[var(--text-muted)]">
+                      DataForSEO
+                    </span>
                   </p>
                   <p className="flex items-center justify-between text-[12px]">
                     <span className="text-[var(--text-secondary)]">Trends</span>
-                    <span className="font-mono text-[var(--text-muted)]">Google Trends</span>
+                    <span className="font-mono text-[var(--text-muted)]">
+                      Google Trends
+                    </span>
                   </p>
                 </div>
               </div>
